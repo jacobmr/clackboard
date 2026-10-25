@@ -45,3 +45,6 @@ clackboard.db*
 
 # agent tooling state
 .claude/
+
+# encrypted secrets stay out of the public repo
+secrets.env.enc
