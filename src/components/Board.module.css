@@ -1,0 +1,111 @@
+.board {
+  --flap: #1b1b1d;
+  --flap-edge: #0c0c0d;
+  --ink: #f3efe6;
+  --frame: #050506;
+  display: grid;
+  gap: calc(var(--cell) * 0.12);
+  padding: calc(var(--cell) * 0.5);
+  background: var(--frame);
+  border-radius: calc(var(--cell) * 0.3);
+  box-shadow: inset 0 0 calc(var(--cell) * 0.6) #000;
+  width: max-content;
+}
+
+.light {
+  --flap: #f1eee7;
+  --flap-edge: #d8d3c8;
+  --ink: #1a1a1a;
+  --frame: #c9c3b6;
+  box-shadow: inset 0 0 calc(var(--cell) * 0.4) #00000033;
+}
+
+.cell {
+  position: relative;
+  width: var(--cell);
+  height: calc(var(--cell) * 1.45);
+  perspective: calc(var(--cell) * 6);
+}
+
+.half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--flap);
+  color: var(--ink);
+}
+
+.top {
+  top: 0;
+  border-radius: calc(var(--cell) * 0.08) calc(var(--cell) * 0.08) 0 0;
+  border-bottom: max(1px, calc(var(--cell) * 0.03)) solid var(--flap-edge);
+  transform-origin: bottom;
+}
+
+.bottom {
+  bottom: 0;
+  border-radius: 0 0 calc(var(--cell) * 0.08) calc(var(--cell) * 0.08);
+  transform-origin: top;
+}
+
+/* Each face is the full cell; the half clips it. */
+.glyph,
+.tile {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 200%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom .glyph,
+.bottom .tile {
+  top: -100%;
+}
+
+.glyph {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  font-size: calc(var(--cell) * 1.05);
+  line-height: 1;
+}
+
+.tile {
+  inset: 0 0 auto 0;
+}
+
+.leafTop {
+  z-index: 2;
+  animation: fall-top 65ms ease-in forwards;
+  backface-visibility: hidden;
+}
+
+.leafBottom {
+  z-index: 2;
+  transform: rotateX(90deg);
+  animation: fall-bottom 65ms ease-out 32ms forwards;
+  backface-visibility: hidden;
+}
+
+@keyframes fall-top {
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes fall-bottom {
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leafTop,
+  .leafBottom {
+    display: none;
+  }
+}

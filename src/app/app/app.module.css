@@ -1,0 +1,108 @@
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+  font: 16px/1.4 system-ui, sans-serif;
+}
+
+.header,
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.card h3 {
+  margin: 16px 0 6px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.preview {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.item {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.settings .check {
+  flex-direction: row;
+  align-items: center;
+}
+
+.settings p,
+.settings button {
+  grid-column: 1 / -1;
+}
+
+.secs {
+  width: 72px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.error {
+  color: #d6453d;
+}
+
+.secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0;
+  text-decoration: underline;
+}
+
+.danger {
+  background: #b33a33;
+}
