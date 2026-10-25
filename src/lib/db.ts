@@ -12,7 +12,9 @@ export const DEFAULT_OWNER = "default";
 export type PlaylistItem =
   | { kind: "text"; text: string; seconds: number }
   | { kind: "time"; seconds: number; timezone?: string }
-  | { kind: "weather"; seconds: number; place: string; lat: number; lon: number };
+  | { kind: "weather"; seconds: number; place: string; lat: number; lon: number }
+  | { kind: "ha"; seconds: number; title: string; entities: { id: string; label: string }[] }
+  | { kind: "calendar"; seconds: number; title: string; url: string; days: number };
 
 export type Override = { text: string; until: number };
 

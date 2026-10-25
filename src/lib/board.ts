@@ -69,6 +69,11 @@ export function layout(
 ): Grid {
   const lines: string[][] = [];
   for (const para of splitLines(tokenize(text))) {
+    // A line that already fits keeps its spacing, so feeds can line up columns.
+    if (para.length <= cols) {
+      lines.push(para);
+      continue;
+    }
     let line: string[] = [];
     for (const word of splitWords(para)) {
       const need = line.length === 0 ? word.length : line.length + 1 + word.length;

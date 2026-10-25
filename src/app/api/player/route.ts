@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       : null;
 
   const items = await Promise.all(
-    screen.playlist.map(async (item) => ({ seconds: item.seconds, text: await renderItem(item) })),
+    screen.playlist.map(async (item) => ({ seconds: item.seconds, text: await renderItem(item, screen) })),
   );
 
   return Response.json({ paired: true, name: screen.name, config, override, items });

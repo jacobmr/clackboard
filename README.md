@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Clackboard
 
-## Getting Started
+A split-flap message board for any screen. Open `/player` on a TV, pair it
+from your phone, and send messages, weather, calendar events and Home
+Assistant states to it. Self-hosted and single-owner.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+ADMIN_PASSWORD=... API_TOKEN=... SESSION_SECRET=... pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Open http://localhost:3000/player on the screen. It shows a 6-character code.
+2. Open http://localhost:3000/app on your phone, sign in with `ADMIN_PASSWORD`, enter the code.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | yes | Sign-in for the phone app |
+| `API_TOKEN` | yes | Bearer token for the HTTP API |
+| `SESSION_SECRET` | yes | Signs the session cookie (any long random string) |
+| `TURSO_DATABASE_URL` | no | libSQL/Turso URL; defaults to a local `clackboard.db` file |
+| `TURSO_AUTH_TOKEN` | no | Turso token |
+| `HA_URL`, `HA_TOKEN` | no | Home Assistant base URL and long-lived access token |
+| `DEFAULT_TIMEZONE` | no | IANA zone for time and calendar feeds (default `America/Los_Angeles`) |
 
-## Learn More
+## Sending messages
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+curl -X POST https://your-host/api/screens/all/send \
+  -H "Authorization: Bearer $API_TOKEN" -H "content-type: application/json" \
+  -d '{"text": "{green} DINNER AT 7 {green}", "seconds": 600}'
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use a screen id instead of `all` for one screen. `"seconds": 0` keeps the
+message up until `DELETE /api/screens/<id>/send`. Colors: `{red}` `{orange}`
+`{yellow}` `{green}` `{blue}` `{violet}` `{white}`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### From Home Assistant
 
-## Deploy on Vercel
+The Home Assistant playlist item reads states from `HA_URL`, so HA must be
+reachable from where Clackboard runs. If it is not (HA behind Tailscale, say),
+push instead; HA only needs outbound access:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```yaml
+rest_command:
+  clackboard:
+    url: https://your-host/api/screens/all/send
+    method: post
+    headers:
+      authorization: !secret clackboard_bearer   # "Bearer <API_TOKEN>"
+    content_type: application/json
+    payload: '{"text": "{{ text }}", "seconds": {{ seconds | default(300) }}}'
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Feeds
+
+- **Time** and **weather** ([Open-Meteo](https://open-meteo.com), no key)
+- **Calendar**: any iCal URL. For Google Calendar use Settings > your calendar > "Secret address in iCal format".
+- **Home Assistant**: list entity ids and labels; values line up in columns.
+
+## License
+
+MIT

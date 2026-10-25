@@ -22,6 +22,10 @@ function seconds(v: unknown): number {
   return Number.isFinite(n) ? Math.min(3600, Math.max(5, Math.round(n))) : 15;
 }
 
+function text(v: unknown, fallback: string): string {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : fallback;
+}
+
 function parseItem(raw: unknown): PlaylistItem[] {
   if (!raw || typeof raw !== "object") return [];
   const it = raw as Record<string, unknown>;
@@ -44,6 +48,23 @@ function parseItem(raw: unknown): PlaylistItem[] {
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
       const place = typeof it.place === "string" ? it.place.slice(0, 40) : "WEATHER";
       return [{ kind: "weather", seconds: seconds(it.seconds), place, lat, lon }];
+    }
+    case "ha": {
+      const entities = Array.isArray(it.entities)
+        ? it.entities.flatMap((e) => {
+            const id = typeof e?.id === "string" ? e.id.trim() : "";
+            // HA entity ids look like "binary_sensor.front_door".
+            if (!/^[a-z_]+\.[a-z0-9_]+$/.test(id)) return [];
+            return [{ id, label: typeof e.label === "string" ? e.label.slice(0, 40) : "" }];
+          })
+        : [];
+      return [{ kind: "ha", seconds: seconds(it.seconds), title: text(it.title, "HOME"), entities: entities.slice(0, 16) }];
+    }
+    case "calendar": {
+      if (typeof it.url !== "string" || !/^(https?|webcal):\/\//i.test(it.url)) return [];
+      const days = Math.min(14, Math.max(1, Math.round(Number(it.days)) || 1));
+      const url = it.url.replace(/^webcal:/i, "https:");
+      return [{ kind: "calendar", seconds: seconds(it.seconds), title: text(it.title, "TODAY"), url, days }];
     }
     default:
       return [];

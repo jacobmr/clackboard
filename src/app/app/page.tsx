@@ -132,6 +132,14 @@ function ScreenCard({
   const [seconds, setSeconds] = useState(300);
   const [playlist, setPlaylist] = useState<PlaylistItem[]>(screen.playlist);
   const [saved, setSaved] = useState(true);
+  const [rendered, setRendered] = useState<string[]>([]);
+
+  // Preview the playlist as the TV renders it, feeds included.
+  useEffect(() => {
+    api<{ rendered: string[] }>(`/api/screens/${screen.id}`)
+      .then((r) => setRendered(r.rendered))
+      .catch(() => undefined);
+  }, [screen.id, screen.version]);
 
   const patch = async (body: Record<string, unknown>) => {
     const { screen: s } = await api<{ screen: Screen }>(`/api/screens/${screen.id}`, {
@@ -146,7 +154,7 @@ function ScreenCard({
     setSaved(false);
   };
 
-  const preview = layout(draft || playlist.find((p) => p.kind === "text")?.text || "", screen.rows, screen.cols, screen.align);
+  const preview = layout(draft || rendered[0] || "", screen.rows, screen.cols, screen.align);
 
   return (
     <section className={styles.card}>
@@ -211,6 +219,18 @@ function ScreenCard({
           onClick={() => edit(playlist.length, { kind: "weather", seconds: 20, place: "PORTLAND", lat: 45.52, lon: -122.68 })}
         >
           + Weather
+        </button>
+        <button
+          className={styles.secondary}
+          onClick={() => edit(playlist.length, { kind: "ha", seconds: 20, title: "HOME", entities: [{ id: "", label: "" }] })}
+        >
+          + Home Assistant
+        </button>
+        <button
+          className={styles.secondary}
+          onClick={() => edit(playlist.length, { kind: "calendar", seconds: 20, title: "TODAY", url: "", days: 1 })}
+        >
+          + Calendar
         </button>
         <button
           disabled={saved}
@@ -294,6 +314,48 @@ function PlaylistRow({
           <input value={item.place} onChange={(e) => onChange({ ...item, place: e.target.value })} />
           <input type="number" step="0.01" value={item.lat} onChange={(e) => onChange({ ...item, lat: Number(e.target.value) })} />
           <input type="number" step="0.01" value={item.lon} onChange={(e) => onChange({ ...item, lon: Number(e.target.value) })} />
+        </div>
+      )}
+      {item.kind === "ha" && (
+        <>
+          <input value={item.title} placeholder="Title" onChange={(e) => onChange({ ...item, title: e.target.value })} />
+          {item.entities.map((ent, i) => {
+            const set = (next: { id: string; label: string } | null) =>
+              onChange({
+                ...item,
+                entities: next ? item.entities.map((x, j) => (j === i ? next : x)) : item.entities.filter((_, j) => j !== i),
+              });
+            return (
+              <div key={i} className={styles.row}>
+                <input placeholder="binary_sensor.front_door" value={ent.id} onChange={(e) => set({ ...ent, id: e.target.value })} />
+                <input placeholder="Label" value={ent.label} onChange={(e) => set({ ...ent, label: e.target.value })} />
+                <button className={styles.link} onClick={() => set(null)}>
+                  ×
+                </button>
+              </div>
+            );
+          })}
+          <button
+            className={styles.link}
+            onClick={() => onChange({ ...item, entities: [...item.entities, { id: "", label: "" }] })}
+          >
+            + entity
+          </button>
+        </>
+      )}
+      {item.kind === "calendar" && (
+        <div className={styles.row}>
+          <input value={item.title} placeholder="Title" onChange={(e) => onChange({ ...item, title: e.target.value })} />
+          <input
+            placeholder="iCal URL (Google: Settings > Secret address in iCal format)"
+            value={item.url}
+            onChange={(e) => onChange({ ...item, url: e.target.value })}
+          />
+          <select value={item.days} onChange={(e) => onChange({ ...item, days: Number(e.target.value) })}>
+            <option value={1}>Next 24 h</option>
+            <option value={3}>Next 3 days</option>
+            <option value={7}>Next 7 days</option>
+          </select>
         </div>
       )}
       <div className={styles.row}>
