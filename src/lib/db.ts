@@ -96,6 +96,12 @@ export async function createDevice(): Promise<{ deviceToken: string; code: strin
   const c = await db();
   const deviceToken = randomBytes(24).toString("base64url");
   const code = pairCode();
+  // Every fresh player registers itself; drop codes nobody claimed that have
+  // not polled for a day. A TV that comes back after that just gets a new code.
+  await c.execute({
+    sql: "DELETE FROM screens WHERE paired = 0 AND COALESCE(last_seen, created_at) < ?",
+    args: [Date.now() - 24 * 60 * 60 * 1000],
+  });
   await c.execute({
     sql: `INSERT INTO screens (id, owner_id, name, device_token, pair_code, created_at)
           VALUES (?, ?, ?, ?, ?, ?)`,
