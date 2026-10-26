@@ -61,6 +61,20 @@ rest_command:
 - **Calendar**: any iCal URL. For Google Calendar use Settings > your calendar > "Secret address in iCal format".
 - **Home Assistant**: list entity ids and labels; values line up in columns.
 
+## Raspberry Pi player
+
+Any TV browser can open `/player`. For a TV without one, a Raspberry Pi behind
+it works, down to the original Pi Zero W, which is too slow for a browser.
+`pi/player/` is a small Python player that draws the board into the Linux
+framebuffer and plays the flap clicks over HDMI.
+
+1. On a Mac, write the SD card: `pi/make-sd.sh` (Raspberry Pi OS Lite 32-bit,
+   Wi-Fi and your SSH key; asks for sudo). The Zero W sees 2.4 GHz Wi-Fi only.
+2. Boot the Pi, then copy `pi/player/` to it and run
+   `sudo ./install.sh https://your-server`. It starts at boot as
+   `clackboard.service`; logs: `journalctl -u clackboard -f`.
+3. Pair the code shown on the TV in `/app`.
+
 ## License
 
 MIT
