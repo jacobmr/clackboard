@@ -105,7 +105,8 @@ EOF
 unset WIFI_PASS
 
 sync
-diskutil eject "/dev/$DISK"
+# Spotlight often grabs the fresh volume; wait, then force it off.
+diskutil eject "/dev/$DISK" || { sleep 3; diskutil unmountDisk force "/dev/$DISK" && diskutil eject "/dev/$DISK"; }
 echo
 echo "Done. Put the card in the Pi, plug in power, wait 3 to 5 minutes, then:"
 echo "  ssh $USER_PI@$HOSTNAME_PI.local"
