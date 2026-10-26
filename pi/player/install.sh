@@ -3,7 +3,7 @@
 # Run on the Pi: sudo ./install.sh [server-url]
 set -euo pipefail
 
-SERVER="${1:-https://clackboard.vercel.app}"
+SERVER="${1:-https://www.clackboard.fyi}"
 RUN_USER="${SUDO_USER:-$(whoami)}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 

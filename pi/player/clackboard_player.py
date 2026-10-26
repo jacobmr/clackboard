@@ -22,7 +22,7 @@ import urllib.request
 
 import pygame
 
-SERVER = os.environ.get("CLACKBOARD_SERVER", "https://clackboard.vercel.app").rstrip("/")
+SERVER = os.environ.get("CLACKBOARD_SERVER", "https://www.clackboard.fyi").rstrip("/")
 STATE_FILE = os.path.expanduser(os.environ.get("CLACKBOARD_STATE", "~/.config/clackboard/device.json"))
 POLL_S = 4
 STEP_S = 0.065  # one flap step, same as the web board
