@@ -7,8 +7,7 @@ SERVER="${1:-https://clackboard.vercel.app}"
 RUN_USER="${SUDO_USER:-$(whoami)}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-# SDL draws through EGL on KMS, so it needs the Mesa GL stack.
-apt-get install -y --no-install-recommends python3-pygame libegl1 libegl-mesa0 libgles2 libgbm1 libgl1-mesa-dri
+apt-get install -y --no-install-recommends python3-pygame
 install -D -m 755 "$HERE/clackboard_player.py" /opt/clackboard/clackboard_player.py
 
 cat > /etc/systemd/system/clackboard.service <<EOF
@@ -19,9 +18,10 @@ Wants=network-online.target
 
 [Service]
 User=$RUN_USER
-SupplementaryGroups=video render input
+SupplementaryGroups=video tty audio
 Environment=CLACKBOARD_SERVER=$SERVER
-Environment=SDL_VIDEODRIVER=kmsdrm
+AmbientCapabilities=CAP_SYS_TTY_CONFIG
+Environment=AUDIODEV=hdmi:CARD=vc4hdmi,DEV=0
 ExecStart=/usr/bin/python3 -u /opt/clackboard/clackboard_player.py
 Restart=always
 RestartSec=5
@@ -32,7 +32,9 @@ EOF
 
 # The board owns the TV: no login prompt on it, and the screen never blanks.
 systemctl disable --now getty@tty1.service || true
-grep -q consoleblank=0 /boot/firmware/cmdline.txt || sed -i '1 s/$/ consoleblank=0/' /boot/firmware/cmdline.txt
+for opt in consoleblank=0 vt.global_cursor_default=0; do
+  grep -q "$opt" /boot/firmware/cmdline.txt || sed -i "1 s/\$/ $opt/" /boot/firmware/cmdline.txt
+done
 
 systemctl daemon-reload
 systemctl enable --now clackboard.service

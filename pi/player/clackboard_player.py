@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Clackboard player for small Pis (Pi Zero W) that cannot run a browser.
 
-Draws the split-flap board straight to the screen with pygame (KMS/DRM, no
-desktop) and polls the same API as the web player, asking for messages
-already laid out as grids, so the layout rules live only on the server.
+Draws the split-flap board with pygame into the Linux framebuffer (/dev/fb0,
+no desktop, no GPU stack) and polls the same API as the web player, asking
+for messages already laid out as grids, so the layout rules live only on the
+server.
 """
 
+import fcntl
 import json
+import math
+import mmap
 import os
+import random
+import struct
 import threading
 import time
 import urllib.error
@@ -127,6 +133,108 @@ class Rotation:
         return items[self.index % len(items)].get("grid")
 
 
+# --- sound ---------------------------------------------------------------------
+
+class Clicks:
+    """Flap clicks, the same recipe as the web board: a 12 ms noise burst with a
+    cubic fade, through a band-pass filter at a random 1.8-3.4 kHz."""
+
+    RATE = 48000
+    MIN_GAP_S = 0.006  # many flaps land together; a clatter, not a roar
+
+    def __init__(self, variants=12):
+        self.sounds = []
+        self.last = 0.0
+        try:
+            pygame.mixer.init(self.RATE, -16, 2, 2048)
+            pygame.mixer.set_num_channels(16)
+        except pygame.error as e:
+            print("no sound:", e, flush=True)
+            return
+        for _ in range(variants):
+            self.sounds.append(pygame.mixer.Sound(buffer=self.burst(1800 + random.random() * 1600)))
+
+    def burst(self, freq, q=1.2, gain=0.35):
+        n = int(self.RATE * 0.012)
+        # RBJ band-pass biquad (constant 0 dB peak gain).
+        w = 2 * math.pi * freq / self.RATE
+        alpha = math.sin(w) / (2 * q)
+        b0, b2 = alpha, -alpha
+        a0, a1, a2 = 1 + alpha, -2 * math.cos(w), 1 - alpha
+        x1 = x2 = y1 = y2 = 0.0
+        out = bytearray()
+        for i in range(n):
+            x = (random.random() * 2 - 1) * (1 - i / n) ** 3
+            y = (b0 * x + b2 * x2 - a1 * y1 - a2 * y2) / a0
+            x2, x1, y2, y1 = x1, x, y1, y
+            v = int(max(-1.0, min(1.0, y * gain * 3)) * 32767)
+            out += struct.pack("<hh", v, v)
+        return bytes(out)
+
+    def click(self):
+        now = time.monotonic()
+        if not self.sounds or now - self.last < self.MIN_GAP_S:
+            return
+        self.last = now
+        random.choice(self.sounds).play()
+
+
+# --- display -------------------------------------------------------------------
+
+class Framebuffer:
+    """A pygame surface mirrored into /dev/fb0. Only RGB565 and 32-bit are handled."""
+
+    KDSETMODE, KD_GRAPHICS, KD_TEXT = 0x4B3A, 1, 0
+
+    def __init__(self, dev="/dev/fb0"):
+        name = os.path.basename(dev)
+        sys_dir = "/sys/class/graphics/" + name
+        read = lambda f: open(os.path.join(sys_dir, f)).read().strip()
+        w, h = (int(v) for v in read("virtual_size").split(","))
+        bpp = int(read("bits_per_pixel"))
+        self.stride = int(read("stride"))
+        if bpp == 16:
+            self.surface = pygame.Surface((w, h), 0, 16, (0xF800, 0x07E0, 0x001F, 0))
+        elif bpp == 32:
+            self.surface = pygame.Surface((w, h), 0, 32, (0xFF0000, 0xFF00, 0xFF, 0))
+        else:
+            raise SystemExit("unsupported framebuffer depth %d" % bpp)
+        self.bytes_pp = bpp // 8
+        self.fd = os.open(dev, os.O_RDWR)
+        self.mm = mmap.mmap(self.fd, self.stride * h)
+        self.text_mode_off()
+
+    def text_mode_off(self):
+        # Stop the console drawing its cursor and messages over the board.
+        try:
+            tty = os.open("/dev/tty1", os.O_WRONLY)
+            fcntl.ioctl(tty, self.KDSETMODE, self.KD_GRAPHICS)
+            self.tty = tty
+        except OSError as e:
+            print("console stays in text mode:", e, flush=True)
+
+    def get_size(self):
+        return self.surface.get_size()
+
+    def flip(self):
+        self.update([self.surface.get_rect()])
+
+    def update(self, rects):
+        # The buffer locks the surface, so take it only for the copy.
+        proxy = self.surface.get_buffer()
+        raw = memoryview(proxy).cast("B")
+        pitch = self.surface.get_pitch()
+        for r in rects:
+            r = r.clip(self.surface.get_rect())
+            n = r.w * self.bytes_pp
+            for y in range(r.top, r.bottom):
+                s = y * pitch + r.x * self.bytes_pp
+                d = y * self.stride + r.x * self.bytes_pp
+                self.mm[d:d + n] = raw[s:s + n]
+        raw.release()
+        del proxy
+
+
 # --- drawing -------------------------------------------------------------------
 
 class Tiles:
@@ -176,8 +284,11 @@ class Tiles:
 
 
 class Board:
-    def __init__(self, screen):
+    def __init__(self, screen, flip, clicks=None):
         self.screen = screen
+        self.flip = flip
+        self.clicks = clicks
+        self.sound = False
         self.layout_key = None
         self.cells = []  # [row][col] -> {"cur": ch, "target": ch, "t": step start}
 
@@ -202,9 +313,10 @@ class Board:
         for r in range(rows):
             for c in range(cols):
                 self.draw_cell(r, c, 1)
-        pygame.display.flip()
+        self.flip()
 
     def set_grid(self, grid, config):
+        self.sound = bool(config.get("sound"))
         key = (config["rows"], config["cols"], config.get("theme", "dark"))
         if key != self.layout_key:
             self.layout_key = key
@@ -241,6 +353,8 @@ class Board:
                 phase = (now - cell["t"]) / STEP_S
                 if phase >= 1:
                     cell["cur"], cell["t"] = nxt, now
+                    if self.sound and self.clicks:
+                        self.clicks.click()
                     dirty.append(self.draw_cell(r, c, 1))
                 else:
                     dirty.append(self.draw_cell(r, c, phase, cell["cur"], nxt))
@@ -248,30 +362,35 @@ class Board:
 
 
 def main():
-    os.environ.setdefault("SDL_VIDEODRIVER", "kmsdrm")
-    pygame.display.init()
     pygame.font.init()
-    pygame.mouse.set_visible(False)
-    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-    print("screen", screen.get_size(), pygame.display.get_driver(), flush=True)
+    if os.environ.get("CLACKBOARD_DISPLAY") == "sdl":
+        pygame.display.init()
+        pygame.mouse.set_visible(False)
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        flip, update = pygame.display.flip, pygame.display.update
+    else:
+        fb = Framebuffer()
+        screen, flip, update = fb.surface, fb.flip, fb.update
+    print("screen", screen.get_size(), flush=True)
 
     poller = Poller()
     poller.start()
     rotation = Rotation()
-    board = Board(screen)
+    board = Board(screen, flip, Clicks())
     clock = pygame.time.Clock()
 
     while True:
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE):
-                return
+        if pygame.display.get_init():
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT:
+                    return
         state = poller.state
         if state:
             board.set_grid(rotation.grid(state), state["config"])
         if board.layout_key:
             dirty = board.tick()
             if dirty:
-                pygame.display.update(dirty)
+                update(dirty)
         clock.tick(FPS)
 
 
