@@ -1,6 +1,6 @@
 # Clackboard handoff
 
-Last updated 2026-10-26 (session ended by JMR; he has enhancements to suggest).
+Last updated 2026-10-27 (re-checked; no code changes since 2026-10-26. Session ended by JMR; he has enhancements to suggest).
 
 ## START HERE
 
@@ -77,6 +77,10 @@ and Vercel production.
   login only, passwordless sudo. Raspberry Pi OS 13 Trixie armhf. Paired as screen
   **"38W"**. Service `clackboard.service` (`/opt/clackboard/clackboard_player.py`), about 6%
   CPU and 45 MB RSS when idle. Device token in `~/.config/clackboard/device.json` on the Pi.
+- **Pi offline as of 2026-10-27:** `/api/screens` showed "38W" last polled about 83 min before the
+  check, and `clackboard.local` did not resolve from the Mac. It may just be unplugged or the Mac
+  on another network. If the board is blank, check power and Wi-Fi `6DP` first.
+  To see when it last polled without SSH: `GET /api/screens` with the Bearer `API_TOKEN` and read `lastSeen`.
 - Questions doc: https://claude.ai/artifact/4AUW1o4cr1AhM6bzEDtbzt. Q1–Q7 answered; nothing open.
 
 ## Standing rules worth not relearning
