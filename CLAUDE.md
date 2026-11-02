@@ -6,7 +6,7 @@ Read `docs/working/HANDOFF.md` first: current state, next work, live surfaces.
 
 ## Artifact index (docs.reider.us)
 After creating any artifact, doc, spec, or question doc, add an entry to the
-master index: https://claude.ai/artifact/SF3PuPCs8zeGrvF56G9EEk
+master index: https://claude.ai/artifact/SRr3aWTnDM6i6gXLJW6BKB
 - If the ArtifactData tool is available: `set` on collection `entries` with
   title, url, folder, source ("code"), note (one line), archived=false,
   added (ISO timestamp). Reuse existing folders; archive, don't delete.
