@@ -1,5 +1,6 @@
 import ical, { type VEvent } from "node-ical";
 import type { PlaylistItem } from "./db";
+import { parseVideo } from "./video";
 
 // Feeds render to board markup on the server, so the player only ever
 // receives text. A renderer gets the board size so it can fit its lines.
@@ -18,6 +19,9 @@ export async function renderItem(item: PlaylistItem, size: Size): Promise<string
       return renderHomeAssistant(item.title, item.entities, size);
     case "calendar":
       return renderCalendar(item.title, item.url, item.days, size);
+    case "video":
+      // Only the app preview shows this; the TV player plays the video instead.
+      return `VIDEO\n${parseVideo(item.url)?.provider ?? "LINK"}`;
   }
 }
 

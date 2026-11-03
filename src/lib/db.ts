@@ -14,7 +14,8 @@ export type PlaylistItem =
   | { kind: "time"; seconds: number; timezone?: string }
   | { kind: "weather"; seconds: number; place: string; lat: number; lon: number }
   | { kind: "ha"; seconds: number; title: string; entities: { id: string; label: string }[] }
-  | { kind: "calendar"; seconds: number; title: string; url: string; days: number };
+  | { kind: "calendar"; seconds: number; title: string; url: string; days: number }
+  | { kind: "video"; seconds: number; url: string };
 
 export type Override = { text: string; until: number };
 

@@ -1,6 +1,7 @@
 import { layout } from "@/lib/board";
 import { screenByDevice } from "@/lib/db";
 import { renderItem } from "@/lib/feeds";
+import { parseVideo } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,15 @@ export async function GET(req: Request) {
       ? { ...screen.override, ...grid(screen.override.text) }
       : null;
 
+  // Grid players (the Pi Zero W) have no browser to play video, so they get
+  // the playlist without video items.
+  const playlist = wantGrid ? screen.playlist.filter((i) => i.kind !== "video") : screen.playlist;
   const items = await Promise.all(
-    screen.playlist.map(async (item) => {
+    playlist.map(async (item) => {
+      if (item.kind === "video") {
+        const video = parseVideo(item.url);
+        if (video) return { seconds: item.seconds, text: "", video };
+      }
       const text = await renderItem(item, screen);
       return { seconds: item.seconds, text, ...grid(text) };
     }),

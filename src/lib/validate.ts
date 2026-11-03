@@ -1,5 +1,6 @@
 import { clampSize } from "./board";
 import type { PlaylistItem, ScreenPatch } from "./db";
+import { parseVideo } from "./video";
 
 // Turn an untrusted JSON body into a ScreenPatch, dropping anything invalid.
 export function parsePatch(body: Record<string, unknown>, current: { rows: number; cols: number }): ScreenPatch {
@@ -66,6 +67,11 @@ function parseItem(raw: unknown): PlaylistItem[] {
       const url = it.url.replace(/^webcal:/i, "https:");
       return [{ kind: "calendar", seconds: seconds(it.seconds), title: text(it.title, "TODAY"), url, days }];
     }
+    case "video":
+      // Keep the link as typed so the editor shows it; the player parses it.
+      return typeof it.url === "string" && parseVideo(it.url)
+        ? [{ kind: "video", seconds: seconds(it.seconds), url: it.url.trim().slice(0, 300) }]
+        : [];
     default:
       return [];
   }

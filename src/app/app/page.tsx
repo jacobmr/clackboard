@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Board from "@/components/Board";
 import { layout } from "@/lib/board";
+import { parseVideo } from "@/lib/video";
 import type { PlaylistItem, Screen } from "@/lib/db";
 import styles from "./app.module.css";
 
@@ -232,6 +233,9 @@ function ScreenCard({
         >
           + Calendar
         </button>
+        <button className={styles.secondary} onClick={() => edit(playlist.length, { kind: "video", seconds: 60, url: "" })}>
+          + Video
+        </button>
         <button
           disabled={saved}
           onClick={async () => {
@@ -357,6 +361,17 @@ function PlaylistRow({
             <option value={7}>Next 7 days</option>
           </select>
         </div>
+      )}
+      {item.kind === "video" && (
+        <>
+          <input
+            placeholder="YouTube or Vimeo link"
+            value={item.url}
+            onChange={(e) => onChange({ ...item, url: e.target.value })}
+          />
+          {item.url && !parseVideo(item.url) && <p className={styles.error}>Not a YouTube or Vimeo video link</p>}
+          <p className={styles.muted}>Plays muted until someone taps the TV. Browser players only; the Pi skips it.</p>
+        </>
       )}
       <div className={styles.row}>
         <input

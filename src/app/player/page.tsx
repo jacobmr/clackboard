@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Board, { enableSound } from "@/components/Board";
 import { layout, type Align } from "@/lib/board";
+import { embedUrl, type Video } from "@/lib/video";
 import styles from "./player.module.css";
 
 const TOKEN_KEY = "clackboard.device";
@@ -16,7 +17,7 @@ type State =
       name: string;
       config: Config;
       override: { text: string; until: number } | null;
-      items: { seconds: number; text: string }[];
+      items: { seconds: number; text: string; video?: Video }[];
     };
 
 function readToken(): string | null {
@@ -99,6 +100,9 @@ export default function Player() {
     return items.length ? items[index % items.length].text : "";
   }, [state, items, index]);
 
+  // A video item takes the whole screen; an override message still wins.
+  const video = state?.paired && !state.override && items.length ? items[index % items.length].video : undefined;
+
   if (!state) return <main className={styles.main} />;
 
   const { rows, cols, align, theme, sound } = state.config;
@@ -112,8 +116,20 @@ export default function Player() {
 
   return (
     <main className={`${styles.main} ${theme === "light" ? styles.light : ""}`} onClick={startSound}>
-      <Board grid={grid} sound={sound && soundOn} theme={theme} />
-      {sound && !soundOn && <p className={styles.hint}>Tap for sound and full screen</p>}
+      {video ? (
+        <iframe
+          // A new key restarts the video each time it comes round.
+          key={`${index}-${soundOn}`}
+          className={styles.video}
+          src={embedUrl(video, !soundOn)}
+          allow="autoplay; encrypted-media; fullscreen"
+          referrerPolicy="strict-origin-when-cross-origin"
+          title="Video"
+        />
+      ) : (
+        <Board grid={grid} sound={sound && soundOn} theme={theme} />
+      )}
+      {(sound || video) && !soundOn && <p className={styles.hint}>Tap for sound and full screen</p>}
     </main>
   );
 }

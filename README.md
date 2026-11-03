@@ -60,6 +60,7 @@ rest_command:
 - **Time** and **weather** ([Open-Meteo](https://open-meteo.com), no key)
 - **Calendar**: any iCal URL. For Google Calendar use Settings > your calendar > "Secret address in iCal format".
 - **Home Assistant**: list entity ids and labels; values line up in columns.
+- **Video**: a YouTube or Vimeo link (unlisted Vimeo links work). It fills the screen for the item's seconds, then the board returns. It plays muted until someone taps the TV. Browser players only: the Pi Zero W player skips video items.
 
 ## Raspberry Pi player
 
