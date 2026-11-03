@@ -363,6 +363,14 @@ class Board:
 
 def main():
     pygame.font.init()
+    # Poll first, so the screen checks in (and "last seen" stays fresh) even
+    # with no TV attached. Without HDMI at boot there is no /dev/fb0 yet.
+    poller = Poller()
+    poller.start()
+    while os.environ.get("CLACKBOARD_DISPLAY") != "sdl" and not os.path.exists("/sys/class/graphics/fb0"):
+        print("no framebuffer yet; is the TV connected?", flush=True)
+        time.sleep(30)
+
     if os.environ.get("CLACKBOARD_DISPLAY") == "sdl":
         pygame.display.init()
         pygame.mouse.set_visible(False)
@@ -373,8 +381,6 @@ def main():
         screen, flip, update = fb.surface, fb.flip, fb.update
     print("screen", screen.get_size(), flush=True)
 
-    poller = Poller()
-    poller.start()
     rotation = Rotation()
     board = Board(screen, flip, Clicks())
     clock = pygame.time.Clock()
