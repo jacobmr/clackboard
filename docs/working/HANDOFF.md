@@ -1,32 +1,36 @@
 # Clackboard handoff
 
-Last updated 2026-10-27 (re-checked; no code changes since 2026-10-26. Session ended by JMR; he has enhancements to suggest).
+Last updated 2026-11-04.
 
 ## START HERE
 
-- Nothing is broken or half-done. `main` is pushed and clean. There are no open PRs.
-- **Waiting on JMR:** his list of enhancements, given at the start of the next session.
-  The Questions doc has nothing open (see "Decisions" below).
-- Production works end to end, verified 2026-10-26: JMR paired the Pi on the TV, sent a
-  message from his phone, and confirmed that the flaps and the clicks work ("clicks were perfect").
+- `main` is pushed and clean. No open PRs. The Questions doc has nothing open (Q8 answered 2026-11-03).
+- **Waiting on hardware:** JMR's micro-HDMI adapter for the new Pi 4 arrives 2026-11-04.
+  When it is plugged in (HDMI 0, the port next to USB-C), **power-cycle the Pi** so cage finds
+  the screen at boot (whether cage picks up a hot-plugged screen is unverified). Then the TV shows a
+  pairing code; JMR pairs it in `/app` as a new screen.
+- Then verify on the real TV, in this order: board renders and flaps smoothly; flap sound plays
+  (no tap, `?kiosk`); a video item plays with sound (JMR's demo: https://vimeo.com/962540887, 111 s).
 
 ## The next work, in order
 
-1. **JMR's enhancements.** Ask for the list first. Each decision goes in the Questions doc,
-   not in chat.
-2. *(Optional, ~1 min.)* Make the bare `clackboard.fyi` the primary domain instead of `www.`
-   (Vercel → clackboard → Settings → Domains). The pairing text uses the request host
-   (`src/app/api/player/route.ts`), so the TV would then show `CLACKBOARD.FYI/APP`.
-   Then change `SERVER` in `pi/player/clackboard_player.py:25` and `pi/player/install.sh:6`
-   to the bare domain. Python's urllib does not follow a 308 redirect on POST, so the Pi
-   must use the primary host.
-3. *(Optional, 1–2 days.)* ESP32 small-display client (Q2 lists it as optional). A CYD board
-   can poll `GET /api/player?token=…&format=grid`, the same endpoint the Pi uses.
-4. Dropped by JMR on 2026-10-26: the Home Assistant pull feed (the school HA is on Tailscale,
-   so Vercel can't reach it). Do not resume it unless he asks. The push via `rest_command`
-   is documented in the README.
+1. Bring up the Pi 4 TV (above). If it works, the Zero W ("38W") can be retired or kept as a
+   text-only board.
+2. *(Optional, ~1 min.)* Make the bare `clackboard.fyi` the primary domain instead of `www.`.
+   Then change `SERVER` in `pi/player/clackboard_player.py`, `pi/player/install.sh` and
+   `pi/kiosk/install.sh`. Python's urllib does not follow a 308 on POST.
+3. *(Optional, 1–2 days.)* ESP32 small-display client polling `GET /api/player?token=…&format=grid`.
+4. Dropped by JMR on 2026-10-26: the Home Assistant pull feed. Do not resume unless he asks.
 
-## What shipped this session (2026-10-25 to 2026-10-26, straight to `main`)
+## What shipped 2026-11-03
+
+| Commit | What it did |
+|---|---|
+| 41bdfbd | Video playlist item (YouTube, Vimeo incl. unlisted hashes): `src/lib/video.ts`. Browser `/player` shows it full screen for its seconds, muted until a tap. `?format=grid` (Pi Zero W) leaves video items out. Verified in Chrome locally with YouTube and the Vimeo demo. |
+| e57c2f7 | Zero W player polls before waiting for `/dev/fb0`. Without HDMI at boot it used to crash-loop and look offline. Deployed; "38W" polled again. |
+| e3c991e | `pi/make-sd.sh --tv` (arm64 image, host `clackboard-tv`); `pi/kiosk/install.sh` (cage + Chromium kiosk on `/player?kiosk`, `--autoplay-policy=no-user-gesture-required`); `?kiosk` turns sound on without a tap. Installed on the Pi 4; Chromium runs; no screen attached yet. |
+
+## What shipped 2026-10-25 to 2026-10-26 (straight to `main`)
 
 | Commit | What it did |
 |---|---|
@@ -77,11 +81,12 @@ and Vercel production.
   login only, passwordless sudo. Raspberry Pi OS 13 Trixie armhf. Paired as screen
   **"38W"**. Service `clackboard.service` (`/opt/clackboard/clackboard_player.py`), about 6%
   CPU and 45 MB RSS when idle. Device token in `~/.config/clackboard/device.json` on the Pi.
-- **Pi offline as of 2026-10-27:** `/api/screens` showed "38W" last polled about 83 min before the
-  check, and `clackboard.local` did not resolve from the Mac. It may just be unplugged or the Mac
-  on another network. If the board is blank, check power and Wi-Fi `6DP` first.
-  To see when it last polled without SSH: `GET /api/screens` with the Bearer `API_TOKEN` and read `lastSeen`.
-- Questions doc: https://claude.ai/artifact/4AUW1o4cr1AhM6bzEDtbzt. Q1–Q7 answered; nothing open.
+- Pi 4 (new, 2026-11-03): Raspberry Pi 4 Model B 4 GB, host `clackboard-tv.local` (172.30.7.x on
+  Wi-Fi `6DP` in Portland), user `jmr`, key login, Raspberry Pi OS Trixie arm64 Lite. Service
+  `clackboard-kiosk.service`. Not paired yet. cloud-init ignored the time zone (came up Europe/London);
+  set to America/Los_Angeles by hand.
+- Portland Wi-Fi is also named `6DP`, so both Pis join it there.
+- Questions doc: https://claude.ai/artifact/4AUW1o4cr1AhM6bzEDtbzt. Q1–Q8 answered; nothing open.
 
 ## Standing rules worth not relearning
 
