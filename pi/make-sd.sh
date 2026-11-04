@@ -1,11 +1,20 @@
 #!/bin/bash
-# Write Raspberry Pi OS Lite (32-bit) to an SD card and set it up to boot
-# headless: Wi-Fi, SSH key login, hostname. Works on a Pi Zero W (ARMv6).
+# Write Raspberry Pi OS Lite to an SD card and set it up to boot headless:
+# Wi-Fi, SSH key login, hostname.
 #
-# Usage: pi/make-sd.sh [diskN]      (macOS; asks for sudo to write the card)
+# Usage: pi/make-sd.sh [diskN]              Pi Zero W: 32-bit, host "clackboard"
+#        pi/make-sd.sh --tv [diskN]         Pi 3/4/5 or Zero 2: 64-bit, host
+#                                           "clackboard-tv", for the Chrome kiosk
+# (macOS; asks for sudo to write the card)
 set -euo pipefail
 
-IMAGE_URL="https://downloads.raspberrypi.com/raspios_lite_armhf_latest"
+ARCH=armhf
+if [ "${1:-}" = "--tv" ]; then
+  ARCH=arm64
+  HOSTNAME_PI="${HOSTNAME_PI:-clackboard-tv}"
+  shift
+fi
+IMAGE_URL="https://downloads.raspberrypi.com/raspios_lite_${ARCH}_latest"
 CACHE="$HOME/Downloads/clackboard-pi"
 HOSTNAME_PI="${HOSTNAME_PI:-clackboard}"
 USER_PI="${USER_PI:-$(whoami)}"
@@ -39,7 +48,7 @@ GOT=$(shasum -a 256 "$IMG" | awk '{print $1}')
 [ "$WANT" = "$GOT" ] || die "checksum mismatch for $IMG; delete it and re-run"
 
 # 3. Wi-Fi details. The Zero W only sees 2.4 GHz networks.
-read -r -p "Wi-Fi name (2.4 GHz): " SSID
+read -r -p "Wi-Fi name: " SSID
 read -r -s -p "Wi-Fi password: " WIFI_PASS; echo
 read -r -p "Wi-Fi country code [CR]: " COUNTRY; COUNTRY="${COUNTRY:-CR}"
 read -r -p "Time zone [America/Costa_Rica]: " TZ_PI; TZ_PI="${TZ_PI:-America/Costa_Rica}"

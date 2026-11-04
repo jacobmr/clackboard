@@ -41,6 +41,15 @@ export default function Player() {
   const [state, setState] = useState<State | null>(null);
   const [index, setIndex] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
+
+  // /player?kiosk: a browser started with autoplay allowed (the Pi kiosk), so
+  // sound and unmuted video work without a tap.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("kiosk")) {
+      enableSound();
+      setSoundOn(true);
+    }
+  }, []);
   const token = useRef<string | null>(null);
 
   const poll = useCallback(async () => {
