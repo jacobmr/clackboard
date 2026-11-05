@@ -8,8 +8,9 @@ import { DEFAULT_OWNER } from "./db";
 //   - A paired TV shows a sign-in code for 2 minutes after it boots; typing
 //     it signs a phone in to that TV's account.
 // Either way the phone gets a signed session cookie that lasts a year.
-//   API_TOKEN       - Bearer token for scripts, Home Assistant, curl; it acts
-//                     as DEFAULT_OWNER, the account the first screens were made in
+//   API_TOKEN       - Bearer token for scripts, Home Assistant, curl
+//   API_OWNER       - the account API_TOKEN acts as (default: DEFAULT_OWNER,
+//                     the account the first screens were made in)
 //   SESSION_SECRET  - signs the session cookie
 
 export const SESSION_COOKIE = "cb_session";
@@ -45,7 +46,7 @@ export async function ownerFor(req?: Request): Promise<string | null> {
   const auth = req?.headers.get("authorization");
   if (auth?.startsWith("Bearer ")) {
     const token = process.env.API_TOKEN;
-    return token && safeEqual(auth.slice(7), token) ? DEFAULT_OWNER : null;
+    return token && safeEqual(auth.slice(7), token) ? process.env.API_OWNER || DEFAULT_OWNER : null;
   }
   const value = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!value) return null;

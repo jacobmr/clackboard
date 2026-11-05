@@ -23,7 +23,8 @@ same as with a Chromecast.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `API_TOKEN` | yes | Bearer token for the HTTP API; it acts as the account the first screens were paired in before 2026-11-04 (`default`) |
+| `API_TOKEN` | yes | Bearer token for the HTTP API |
+| `API_OWNER` | no | The account `API_TOKEN` acts as (default `default`, where screens paired before 2026-11-04 live) |
 | `SESSION_SECRET` | yes | Signs the session cookie (any long random string) |
 | `TURSO_DATABASE_URL` | no | libSQL/Turso URL; defaults to a local `clackboard.db` file |
 | `TURSO_AUTH_TOKEN` | no | Turso token |
