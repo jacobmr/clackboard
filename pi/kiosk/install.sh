@@ -48,6 +48,10 @@ pcm.!default { type plug slave.pcm "hdmi:CARD=vc4hdmi0,DEV=0" }
 ctl.!default { type hw card vc4hdmi0 }
 ALSA
 
+# 4K output is too much for a Pi 4 with Chromium and video: force 1080p.
+CMDLINE=/boot/firmware/cmdline.txt
+grep -q "video=HDMI-A-1" "$CMDLINE" || sed -i '1 s/$/ video=HDMI-A-1:1920x1080@60/' "$CMDLINE"
+
 usermod -aG video,render,input,audio "$USER_PI"
 systemctl disable --now getty@tty1.service || true
 systemctl daemon-reload

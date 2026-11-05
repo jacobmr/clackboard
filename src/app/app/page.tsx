@@ -374,7 +374,10 @@ function PlaylistRow({
               <option value={33}>Small (1/3)</option>
             </select>
           </label>
-          <p className={styles.muted}>Plays muted until someone taps the TV. Browser players only; the Pi skips it.</p>
+          <p className={styles.muted}>
+            Pi 4 TV: plays with sound. TV or laptop browser: plays muted until someone clicks the page once. Pi
+            Zero W: skipped.
+          </p>
         </>
       )}
       <div className={styles.row}>
