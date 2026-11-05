@@ -12,12 +12,14 @@
     "@libsql/client": "0.15.15",
     "next": "15.5.27",
     "node-ical": "0.27.3",
+    "qrcode": "1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
+    "@types/qrcode": "1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

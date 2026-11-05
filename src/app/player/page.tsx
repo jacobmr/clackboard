@@ -1,5 +1,6 @@
 "use client";
 
+import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Board, { enableSound } from "@/components/Board";
 import { layout, type Align } from "@/lib/board";
@@ -18,6 +19,7 @@ type State =
       config: Config;
       override: { text: string; until: number } | null;
       items: { seconds: number; text: string; video?: Video }[];
+      signinCode: string | null;
     };
 
 function readToken(): string | null {
@@ -51,6 +53,7 @@ export default function Player() {
     }
   }, []);
   const token = useRef<string | null>(null);
+  const booted = useRef(false);
 
   const poll = useCallback(async () => {
     if (!token.current) {
@@ -61,14 +64,19 @@ export default function Player() {
         writeToken(token.current);
       }
     }
-    const res = await fetch(`/api/player?token=${encodeURIComponent(token.current!)}`, { cache: "no-store" });
+    // The first poll after a page load asks a paired screen to show a sign-in code.
+    const boot = booted.current ? "" : "&boot=1";
+    const res = await fetch(`/api/player?token=${encodeURIComponent(token.current!)}${boot}`, { cache: "no-store" });
     if (res.status === 404) {
       // The screen was removed in the app: start over with a new code.
       token.current = null;
       writeToken(null);
       return poll();
     }
-    if (res.ok) setState(await res.json());
+    if (res.ok) {
+      booted.current = true;
+      setState(await res.json());
+    }
   }, []);
 
   useEffect(() => {
@@ -109,6 +117,17 @@ export default function Player() {
     return items.length ? items[index % items.length].text : "";
   }, [state, items, index]);
 
+  // Any code on screen also gets a QR code that opens /app with it filled in.
+  const code = state ? (state.paired ? state.signinCode : state.code) : null;
+  const [qr, setQr] = useState("");
+  useEffect(() => {
+    if (!code) return setQr("");
+    const url = `${window.location.origin}/app?code=${code}`;
+    QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#000", light: "#fff" } })
+      .then(setQr)
+      .catch(() => setQr(""));
+  }, [code]);
+
   // A video item takes the whole screen; an override message still wins.
   const video = state?.paired && !state.override && items.length ? items[index % items.length].video : undefined;
 
@@ -138,6 +157,7 @@ export default function Player() {
       ) : (
         <Board grid={grid} sound={sound && soundOn} theme={theme} />
       )}
+      {qr && <div className={styles.qr} dangerouslySetInnerHTML={{ __html: qr }} />}
       {(sound || video) && !soundOn && <p className={styles.hint}>Tap for sound and full screen</p>}
     </main>
   );

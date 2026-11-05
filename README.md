@@ -8,18 +8,22 @@ Assistant states to it. Self-hosted and single-owner.
 
 ```bash
 pnpm install
-ADMIN_PASSWORD=... API_TOKEN=... SESSION_SECRET=... pnpm dev
+API_TOKEN=... SESSION_SECRET=... pnpm dev
 ```
 
 1. Open http://localhost:3000/player on the screen. It shows a 6-character code.
-2. Open http://localhost:3000/app on your phone, sign in with `ADMIN_PASSWORD`, enter the code.
+2. Open http://localhost:3000/app on your phone and enter the code, or scan the QR code on the screen.
+
+There are no passwords: the TV is the key. Pairing a TV creates an account on that phone, and the
+phone stays signed in for a year. To sign in on another phone, unplug the TV and plug it back in (or
+reload its page): for 2 minutes it shows a sign-in code. Anyone who can see your TV can do this, the
+same as with a Chromecast.
 
 ## Configuration
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `ADMIN_PASSWORD` | yes | Sign-in for the phone app |
-| `API_TOKEN` | yes | Bearer token for the HTTP API |
+| `API_TOKEN` | yes | Bearer token for the HTTP API; it acts as the account the first screens were paired in before 2026-11-04 (`default`) |
 | `SESSION_SECRET` | yes | Signs the session cookie (any long random string) |
 | `TURSO_DATABASE_URL` | no | libSQL/Turso URL; defaults to a local `clackboard.db` file |
 | `TURSO_AUTH_TOKEN` | no | Turso token |

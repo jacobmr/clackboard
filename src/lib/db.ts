@@ -33,6 +33,8 @@ export type Screen = {
   override: Override | null;
   version: number;
   lastSeen: number | null;
+  // A sign-in code the TV shows for a while after it boots.
+  login: { code: string; until: number } | null;
 };
 
 const SCHEMA = `
@@ -62,9 +64,20 @@ export async function db(): Promise<Client> {
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
   }
-  ready ??= client.execute(SCHEMA).then(() => undefined);
+  ready ??= migrate(client);
   await ready;
   return client;
+}
+
+// Columns added after the first release. SQLite has no ADD COLUMN IF NOT EXISTS.
+const COLUMNS = ["login_code TEXT", "login_until INTEGER"];
+
+async function migrate(c: Client): Promise<void> {
+  await c.execute(SCHEMA);
+  const have = new Set((await c.execute("PRAGMA table_info(screens)")).rows.map((r) => String(r.name)));
+  for (const col of COLUMNS) {
+    if (!have.has(col.split(" ")[0])) await c.execute(`ALTER TABLE screens ADD COLUMN ${col}`);
+  }
 }
 
 function toScreen(row: Record<string, unknown>): Screen {
@@ -82,6 +95,10 @@ function toScreen(row: Record<string, unknown>): Screen {
     override: row.override ? JSON.parse(String(row.override)) : null,
     version: Number(row.version),
     lastSeen: row.last_seen == null ? null : Number(row.last_seen),
+    login:
+      row.login_code && Number(row.login_until) > Date.now()
+        ? { code: String(row.login_code), until: Number(row.login_until) }
+        : null,
   };
 }
 
@@ -111,13 +128,46 @@ export async function createDevice(): Promise<{ deviceToken: string; code: strin
   return { deviceToken, code };
 }
 
-export async function screenByDevice(deviceToken: string): Promise<Screen | null> {
+export const LOGIN_MS = 2 * 60 * 1000;
+
+// boot: the player just started (power-cycled TV, reloaded page). A paired
+// screen then shows a sign-in code for LOGIN_MS: whoever can see the TV can
+// sign in to its account.
+export async function screenByDevice(deviceToken: string, boot = false): Promise<Screen | null> {
+  const c = await db();
+  const now = Date.now();
+  const res = boot
+    ? await c.execute({
+        sql: `UPDATE screens SET last_seen = ?,
+                login_code = CASE WHEN paired = 1 THEN ? END,
+                login_until = CASE WHEN paired = 1 THEN ? END
+              WHERE device_token = ? RETURNING *`,
+        args: [now, pairCode(), now + LOGIN_MS, deviceToken],
+      })
+    : await c.execute({
+        sql: "UPDATE screens SET last_seen = ? WHERE device_token = ? RETURNING *",
+        args: [now, deviceToken],
+      });
+  return res.rows[0] ? toScreen(res.rows[0]) : null;
+}
+
+function normalizeCode(code: string): string {
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+// Use a sign-in code once. Returns the account of the TV that showed it.
+export async function redeemLoginCode(code: string): Promise<string | null> {
   const c = await db();
   const res = await c.execute({
-    sql: "UPDATE screens SET last_seen = ? WHERE device_token = ? RETURNING *",
-    args: [Date.now(), deviceToken],
+    sql: `UPDATE screens SET login_code = NULL, login_until = NULL
+          WHERE login_code = ? AND login_until > ? RETURNING owner_id`,
+    args: [normalizeCode(code), Date.now()],
   });
-  return res.rows[0] ? toScreen(res.rows[0]) : null;
+  return res.rows[0] ? String(res.rows[0].owner_id) : null;
+}
+
+export function newOwner(): string {
+  return randomBytes(12).toString("base64url");
 }
 
 export async function listScreens(owner: string): Promise<Screen[]> {
@@ -143,7 +193,7 @@ export async function claimScreen(owner: string, code: string, name: string): Pr
   const res = await c.execute({
     sql: `UPDATE screens SET owner_id = ?, name = ?, paired = 1, pair_code = NULL, version = version + 1
           WHERE pair_code = ? AND paired = 0 RETURNING *`,
-    args: [owner, name, code.toUpperCase().replace(/[^A-Z0-9]/g, "")],
+    args: [owner, name, normalizeCode(code)],
   });
   return res.rows[0] ? toScreen(res.rows[0]) : null;
 }

@@ -29,3 +29,19 @@
   /* Taps go to the page, so "tap for sound" still works over a video. */
   pointer-events: none;
 }
+
+.qr {
+  position: absolute;
+  right: 3vh;
+  bottom: 3vh;
+  width: 18vh;
+  height: 18vh;
+  border-radius: 1vh;
+  overflow: hidden;
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

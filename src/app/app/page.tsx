@@ -36,7 +36,7 @@ export default function ControlApp() {
   }, [load]);
 
   if (authed === null) return <main className={styles.main} />;
-  if (!authed) return <Login onDone={load} />;
+  if (!authed) return <Start onDone={load} />;
 
   const replace = (s: Screen) => setScreens((all) => all?.map((x) => (x.id === s.id ? s : x)) ?? null);
 
@@ -63,39 +63,32 @@ export default function ControlApp() {
   );
 }
 
-function Login({ onDone }: { onDone: () => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+// Not signed in: the code on a TV is the way in. No passwords.
+function Start({ onDone }: { onDone: () => void }) {
   return (
     <main className={styles.main}>
       <h1>Clackboard</h1>
-      <form
-        className={styles.row}
-        onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            await api("/api/login", { method: "POST", body: JSON.stringify({ password }) });
-            onDone();
-          } catch (err) {
-            setError((err as Error).message);
-          }
-        }}
-      >
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button>Sign in</button>
-      </form>
-      {error && <p className={styles.error}>{error}</p>}
+      <Pair onPaired={onDone} title="Enter the code on your TV" />
+      <p className={styles.muted}>
+        New TV: open clackboard.fyi/player on it and type the code it shows, or scan its QR code.
+        <br />
+        TV already set up: unplug it and plug it back in (or reload its page). For 2 minutes it shows a
+        sign-in code.
+      </p>
     </main>
   );
 }
 
-function Pair({ onPaired }: { onPaired: () => void }) {
-  const [code, setCode] = useState("");
+function Pair({ onPaired, title = "Pair a screen" }: { onPaired: () => void; title?: string }) {
+  // A QR code on the TV opens /app?code=XXXXXX.
+  const [code, setCode] = useState(() =>
+    typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("code") ?? "").toUpperCase(),
+  );
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   return (
     <section className={styles.card}>
-      <h2>Pair a screen</h2>
+      <h2>{title}</h2>
       <form
         className={styles.row}
         onSubmit={async (e) => {
@@ -105,6 +98,7 @@ function Pair({ onPaired }: { onPaired: () => void }) {
             await api("/api/screens/claim", { method: "POST", body: JSON.stringify({ code, name }) });
             setCode("");
             setName("");
+            if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
             onPaired();
           } catch (err) {
             setError((err as Error).message);
@@ -112,8 +106,8 @@ function Pair({ onPaired }: { onPaired: () => void }) {
         }}
       >
         <input placeholder="Code on TV" value={code} maxLength={6} onChange={(e) => setCode(e.target.value.toUpperCase())} />
-        <input placeholder="Name, e.g. Kitchen" value={name} onChange={(e) => setName(e.target.value)} />
-        <button disabled={code.length !== 6}>Pair</button>
+        <input placeholder="Name if new, e.g. Kitchen" value={name} onChange={(e) => setName(e.target.value)} />
+        <button disabled={code.length !== 6}>Go</button>
       </form>
       {error && <p className={styles.error}>{error}</p>}
     </section>

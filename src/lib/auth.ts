@@ -2,11 +2,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { DEFAULT_OWNER } from "./db";
 
-// Single-owner auth for a self-hosted install:
-//   ADMIN_PASSWORD  - typed once on the phone, sets a session cookie
-//   API_TOKEN       - Bearer token for scripts, Home Assistant, curl
+// No passwords: the TV is the key.
+//   - Pairing a new TV with its code creates an account on that phone (or
+//     adds the TV to the account the phone is already signed in to).
+//   - A paired TV shows a sign-in code for 2 minutes after it boots; typing
+//     it signs a phone in to that TV's account.
+// Either way the phone gets a signed session cookie that lasts a year.
+//   API_TOKEN       - Bearer token for scripts, Home Assistant, curl; it acts
+//                     as DEFAULT_OWNER, the account the first screens were made in
 //   SESSION_SECRET  - signs the session cookie
-// Both resolve to DEFAULT_OWNER; accounts can replace this later.
 
 export const SESSION_COOKIE = "cb_session";
 
@@ -26,13 +30,14 @@ function safeEqual(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export function checkPassword(password: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
-  return Boolean(expected) && safeEqual(password, expected!);
-}
-
-export function sessionValue(): string {
-  return `${DEFAULT_OWNER}.${sign(DEFAULT_OWNER)}`;
+export async function startSession(owner: string): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE, `${owner}.${sign(owner)}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
 }
 
 // Returns the owner for a request, from the session cookie or a Bearer token.

@@ -14,7 +14,8 @@ export async function GET(req: Request) {
   const wantGrid = url.searchParams.get("format") === "grid";
   if (!token) return Response.json({ error: "missing token" }, { status: 400 });
 
-  const screen = await screenByDevice(token);
+  // ?boot=1 on a player's first poll: a paired screen then shows a sign-in code.
+  const screen = await screenByDevice(token, url.searchParams.get("boot") === "1");
   if (!screen) return Response.json({ error: "unknown device" }, { status: 404 });
 
   const config = {
@@ -33,8 +34,12 @@ export async function GET(req: Request) {
   }
 
   const now = Date.now();
-  const override =
-    screen.override && (screen.override.until === 0 || screen.override.until > now)
+  const signin = screen.login
+    ? `TO SIGN IN, GO TO\n${url.host}/APP\nAND ENTER\n{yellow} ${screen.login.code} {yellow}`
+    : null;
+  const override = signin
+    ? { text: signin, until: screen.login!.until, ...grid(signin, "center") }
+    : screen.override && (screen.override.until === 0 || screen.override.until > now)
       ? { ...screen.override, ...grid(screen.override.text) }
       : null;
 
@@ -52,5 +57,5 @@ export async function GET(req: Request) {
     }),
   );
 
-  return Response.json({ paired: true, name: screen.name, config, override, items });
+  return Response.json({ paired: true, name: screen.name, config, override, items, signinCode: screen.login?.code ?? null });
 }

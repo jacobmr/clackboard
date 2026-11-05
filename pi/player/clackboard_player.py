@@ -81,14 +81,20 @@ class Poller(threading.Thread):
         super().__init__(daemon=True)
         self.state = None
         self.token = load_token()
+        self.boot = True
 
     def fetch(self):
         if not self.token:
             self.token = http_json("POST", "/api/devices")["deviceToken"]
             save_token(self.token)
-        q = urllib.parse.urlencode({"token": self.token, "format": "grid"})
+        params = {"token": self.token, "format": "grid"}
+        if self.boot:
+            params["boot"] = "1"  # show a sign-in code after a power-cycle
+        q = urllib.parse.urlencode(params)
         try:
-            return http_json("GET", "/api/player?" + q)
+            state = http_json("GET", "/api/player?" + q)
+            self.boot = False
+            return state
         except urllib.error.HTTPError as e:
             if e.code != 404:
                 raise
