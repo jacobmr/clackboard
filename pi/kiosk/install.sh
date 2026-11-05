@@ -41,6 +41,13 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 
+# Chromium plays through ALSA's default device, which is the headphone jack.
+# Send it to the TV (HDMI 0, the port next to USB-C) instead.
+cat > /etc/asound.conf <<ALSA
+pcm.!default { type plug slave.pcm "hdmi:CARD=vc4hdmi0,DEV=0" }
+ctl.!default { type hw card vc4hdmi0 }
+ALSA
+
 usermod -aG video,render,input,audio "$USER_PI"
 systemctl disable --now getty@tty1.service || true
 systemctl daemon-reload
