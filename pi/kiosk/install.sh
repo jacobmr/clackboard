@@ -29,10 +29,13 @@ StandardError=journal
 UtmpIdentifier=tty1
 UtmpMode=user
 Environment=XDG_SESSION_TYPE=wayland
+# --disable-accelerated-video-decode: the Pi 4's hardware decoder path in
+# Chromium freezes after 144 frames (Vimeo stalled at 0:09 every time).
+# Software decoding keeps up at 720p.
 ExecStart=/usr/bin/cage -- /usr/bin/chromium --kiosk --ozone-platform=wayland \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
   --autoplay-policy=no-user-gesture-required --check-for-update-interval=31536000 \\
-  --disable-features=Translate --password-store=basic \\
+  --disable-features=Translate --disable-accelerated-video-decode --password-store=basic \\
   "$SERVER/player?kiosk"
 Restart=always
 RestartSec=5
