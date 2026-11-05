@@ -70,7 +70,14 @@ function parseItem(raw: unknown): PlaylistItem[] {
     case "video":
       // Keep the link as typed so the editor shows it; the player parses it.
       return typeof it.url === "string" && parseVideo(it.url)
-        ? [{ kind: "video", seconds: seconds(it.seconds), url: it.url.trim().slice(0, 300) }]
+        ? [
+            {
+              kind: "video",
+              seconds: seconds(it.seconds),
+              url: it.url.trim().slice(0, 300),
+              size: [100, 75, 50, 33].includes(Number(it.size)) ? Number(it.size) : 100,
+            },
+          ]
         : [];
     default:
       return [];

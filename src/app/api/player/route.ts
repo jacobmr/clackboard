@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     playlist.map(async (item) => {
       if (item.kind === "video") {
         const video = parseVideo(item.url);
-        if (video) return { seconds: item.seconds, text: "", video };
+        if (video) return { seconds: item.seconds, text: "", video, size: item.size ?? 100 };
       }
       const text = await renderItem(item, screen);
       return { seconds: item.seconds, text, ...grid(text) };

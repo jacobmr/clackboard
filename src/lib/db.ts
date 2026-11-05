@@ -15,7 +15,8 @@ export type PlaylistItem =
   | { kind: "weather"; seconds: number; place: string; lat: number; lon: number }
   | { kind: "ha"; seconds: number; title: string; entities: { id: string; label: string }[] }
   | { kind: "calendar"; seconds: number; title: string; url: string; days: number }
-  | { kind: "video"; seconds: number; url: string };
+  // size: percent of the screen's width the video fills (100 = full screen).
+  | { kind: "video"; seconds: number; url: string; size?: number };
 
 export type Override = { text: string; until: number };
 

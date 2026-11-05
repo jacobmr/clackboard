@@ -364,6 +364,15 @@ function PlaylistRow({
             onChange={(e) => onChange({ ...item, url: e.target.value })}
           />
           {item.url && !parseVideo(item.url) && <p className={styles.error}>Not a YouTube or Vimeo video link</p>}
+          <label className={styles.row}>
+            Size
+            <select value={item.size ?? 100} onChange={(e) => onChange({ ...item, size: Number(e.target.value) })}>
+              <option value={100}>Full screen</option>
+              <option value={75}>Large (3/4)</option>
+              <option value={50}>Medium (1/2)</option>
+              <option value={33}>Small (1/3)</option>
+            </select>
+          </label>
           <p className={styles.muted}>Plays muted until someone taps the TV. Browser players only; the Pi skips it.</p>
         </>
       )}

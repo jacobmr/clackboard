@@ -18,7 +18,7 @@ type State =
       name: string;
       config: Config;
       override: { text: string; until: number } | null;
-      items: { seconds: number; text: string; video?: Video }[];
+      items: { seconds: number; text: string; video?: Video; size?: number }[];
       signinCode: string | null;
     };
 
@@ -129,7 +129,9 @@ export default function Player() {
   }, [code]);
 
   // A video item takes the whole screen; an override message still wins.
-  const video = state?.paired && !state.override && items.length ? items[index % items.length].video : undefined;
+  const current = state?.paired && !state.override && items.length ? items[index % items.length] : undefined;
+  const video = current?.video;
+  const size = current?.size ?? 100;
 
   if (!state) return <main className={styles.main} />;
 
@@ -149,6 +151,7 @@ export default function Player() {
           // A new key restarts the video each time it comes round.
           key={`${index}-${soundOn}`}
           className={styles.video}
+          style={{ width: `${size}%`, height: `${size}%` }}
           src={embedUrl(video, !soundOn)}
           allow="autoplay; encrypted-media; fullscreen"
           referrerPolicy="strict-origin-when-cross-origin"

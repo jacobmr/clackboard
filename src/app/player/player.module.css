@@ -21,10 +21,10 @@
 }
 
 .video {
+  /* Width and height come from the item's size; inset + auto margins center it. */
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  margin: auto;
   border: 0;
   /* Taps go to the page, so "tap for sound" still works over a video. */
   pointer-events: none;
