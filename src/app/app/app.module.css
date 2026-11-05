@@ -52,6 +52,13 @@
   border-top: 1px solid var(--line);
 }
 
+/* A link on its own line uses the full width, so the whole URL shows. */
+.item > input:not([type]) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .settings {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

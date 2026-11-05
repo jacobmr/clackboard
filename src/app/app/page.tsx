@@ -144,8 +144,9 @@ function ScreenCard({
     onChange(s);
   };
 
+  // i === playlist.length appends.
   const edit = (i: number, item: PlaylistItem) => {
-    setPlaylist((p) => p.map((x, j) => (j === i ? item : x)));
+    setPlaylist((p) => (i >= p.length ? [...p, item] : p.map((x, j) => (j === i ? item : x))));
     setSaved(false);
   };
 
