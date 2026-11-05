@@ -1,103 +1,114 @@
 # Clackboard handoff
 
-Last updated 2026-11-04.
+Last updated 2026-11-05.
 
 ## START HERE
 
-- `main` is pushed and clean. No open PRs. The Questions doc has nothing open (Q8 answered 2026-11-03).
-- **Waiting on hardware:** JMR's micro-HDMI adapter for the new Pi 4 arrives 2026-11-04.
-  When it is plugged in (HDMI 0, the port next to USB-C), **power-cycle the Pi** so cage finds
-  the screen at boot (whether cage picks up a hot-plugged screen is unverified). Then the TV shows a
-  pairing code; JMR pairs it in `/app` as a new screen.
-- Then verify on the real TV, in this order: board renders and flaps smoothly; flap sound plays
-  (no tap, `?kiosk`); a video item plays with sound (JMR's demo: https://vimeo.com/962540887, 111 s).
+- `main` is pushed and clean at `784f5ca`. No open PRs. Vercel serves `784f5ca` (checked
+  2026-11-05: `POST /api/screens/x/skip` returns 401, so the new route is live).
+- The Pi 4 TV works: board, flap sound, and the Vimeo demo video with sound. JMR confirmed
+  "working" on 2026-11-05.
+- **Waiting on JMR:** try the new **Skip** and **Pause** buttons in `/app` on the real TV.
+  They were tested only on a local copy in Chrome (see Unverified 1).
+- Questions doc: Q1–Q10 answered (Q10 = (b), passwordless "the TV is the key"). Nothing open.
 
 ## The next work, in order
 
-1. Bring up the Pi 4 TV (above). If it works, the Zero W ("38W") can be retired or kept as a
-   text-only board.
-2. *(Optional, ~1 min.)* Make the bare `clackboard.fyi` the primary domain instead of `www.`.
-   Then change `SERVER` in `pi/player/clackboard_player.py`, `pi/player/install.sh` and
-   `pi/kiosk/install.sh`. Python's urllib does not follow a 308 on POST.
-3. *(Optional, 1–2 days.)* ESP32 small-display client polling `GET /api/player?token=…&format=grid`.
-4. Dropped by JMR on 2026-10-26: the Home Assistant pull feed. Do not resume unless he asks.
+1. If JMR reports Skip/Pause problems on the TV: the browser logic is in
+   `src/app/player/page.tsx` (`nextIndex`, and the three effects after "Rotate through the
+   playlist"). The server side is `skipScreen` in `src/lib/db.ts` and
+   `src/app/api/screens/[id]/skip/route.ts`.
+2. Deploy the current Pi player to the Zero W ("38W") when it is online (the command is under
+   Standing rules). That brings boot sign-in codes plus Skip/Pause to it.
+3. *(Offered to JMR, not asked for yet.)* Delete the unused `ADMIN_PASSWORD` env var from
+   Vercel and from `secrets.env.enc`.
+4. *(Offered, not asked for.)* After boot, show the sign-in code in a corner overlay instead of
+   a full-screen message for 2 minutes. The text is built in `src/app/api/player/route.ts`
+   (`signin`).
+5. *(Optional, ~1 min.)* Make bare `clackboard.fyi` the primary domain. Then change `SERVER`
+   in `pi/player/clackboard_player.py`, `pi/player/install.sh` and `pi/kiosk/install.sh`
+   (Python's urllib does not follow a 308 on POST).
+6. *(Optional, 1–2 days.)* ESP32 client polling `GET /api/player?token=…&format=grid`.
+7. Dropped by JMR on 2026-10-26: the Home Assistant pull feed. Do not resume unless he asks.
 
-## What shipped 2026-11-03
+## What shipped 2026-11-04 to 2026-11-05 (straight to `main`)
 
 | Commit | What it did |
 |---|---|
-| 41bdfbd | Video playlist item (YouTube, Vimeo incl. unlisted hashes): `src/lib/video.ts`. Browser `/player` shows it full screen for its seconds, muted until a tap. `?format=grid` (Pi Zero W) leaves video items out. Verified in Chrome locally with YouTube and the Vimeo demo. |
-| e57c2f7 | Zero W player polls before waiting for `/dev/fb0`. Without HDMI at boot it used to crash-loop and look offline. Deployed; "38W" polled again. |
-| e3c991e | `pi/make-sd.sh --tv` (arm64 image, host `clackboard-tv`); `pi/kiosk/install.sh` (cage + Chromium kiosk on `/player?kiosk`, `--autoplay-policy=no-user-gesture-required`); `?kiosk` turns sound on without a tap. Installed on the Pi 4; Chromium runs; no screen attached yet. |
-
-## What shipped 2026-10-25 to 2026-10-26 (straight to `main`)
-
-| Commit | What it did |
-|---|---|
-| fec5f23, 366a356 | `pi/make-sd.sh`: writes Raspberry Pi OS Lite armhf (Trixie) to an SD card and sets up cloud-init `user-data` and `network-config` (Wi-Fi, SSH key, hostname `clackboard`). Forces the eject when Spotlight holds the card. |
-| 53488b9 | `GET /api/player?format=grid` returns each message already laid out as rows of cells, so non-browser players don't port `layout()`. Also adds the first Pi player. |
-| 40e9c9f, 344fb37 | Pi player (`pi/player/clackboard_player.py`): draws into `/dev/fb0` (RGB565 through mmap, writing only changed cells), polls every 4 s, rotates the playlist, and plays flap clicks over HDMI (same recipe as the web board). `pi/player/install.sh` installs it as `clackboard.service`. |
-| e171b54 | The Pi player's default server is `https://www.clackboard.fyi`. |
-| 1676896 | `createDevice` (`src/lib/db.ts:95`) deletes unpaired screens that haven't polled for 24 h. |
-
-Not code: JMR registered `clackboard.fyi` (DNS on Cloudflare, attached to the Vercel project).
-`ADMIN_PASSWORD` was changed to a short passphrase that JMR chose, in both `secrets.env.enc`
-and Vercel production.
+| 77900ab | Kiosk: `/etc/asound.conf` points ALSA at `hdmi:CARD=vc4hdmi0,DEV=0`. Before this, Chromium sent sound to the headphone jack. |
+| e9832fa | **No passwords.** The `/api/login` route was deleted. You sign in by entering a code from the TV: after each boot, a paired screen shows a sign-in code (plus a QR code) for 2 min (`LOGIN_MS`, `src/lib/db.ts`). `redeemLoginCode` uses the code once and starts a 1-year session cookie. Pairing a new screen while signed out creates a new account (`newOwner`). Rate limit: `src/lib/ratelimit.ts`. |
+| 646629e | Video item gets a Size option (100/75/50/33 % of the screen). |
+| 3c456dc | Fix: the playlist "+" buttons never appended an item (`edit` in `src/app/app/page.tsx`). |
+| 3acb1d9 | `API_OWNER` env var sets the account that `API_TOKEN` acts as (`ownerFor`, `src/lib/auth.ts`). Set in Vercel to JMR's account. |
+| 05d0c3f | Kiosk: `video=HDMI-A-1:1920x1080@60` in `cmdline.txt`. At 4K the video choked. |
+| de1565e | Kiosk: Chromium `--disable-accelerated-video-decode`. The Pi 4 hardware decoder froze video at 0:09 (stuck after 144 frames). With software decoding, the demo played 76 s+ with audio. |
+| 784f5ca | **Skip and Pause** buttons in `/app`. Skip bumps `screens.skips`, and players advance when the number changes. `paused` holds the current item. In the browser player, pausing on a video moves to the next message and holds it. Both the browser player and the Pi Zero player support them. API: `POST /api/screens/<id>/skip`, `PATCH /api/screens/<id> {"paused": bool}`. |
 
 ## Corrections
 
-- Raspberry Pi OS Trixie uses **cloud-init** (`user-data`, `network-config` on the boot
-  partition), not `firstrun.sh` or `wpa_supplicant.conf`.
-- **SDL kmsdrm showed nothing on the TV**, even with Mesa EGL installed: the service ran and
-  the DRM plane was active, but the screen was blank. Writing to `/dev/fb0` works. Mesa
-  packages (`libegl1 libegl-mesa0 libgles2 libgbm1 libgl1-mesa-dri`) are still on the Pi but
-  are no longer needed; `install.sh` no longer installs them. `CLACKBOARD_DISPLAY=sdl` keeps
-  the old path for experiments.
-- The first version used a 512-frame audio buffer, which caused ALSA underruns on the Zero W.
-  It is now 2048, with no underruns in a 30 s check.
+- The 2026-11-04 handoff said `ADMIN_PASSWORD` protects the app. It no longer does: there are
+  no passwords since e9832fa. The env var is still set but nothing reads it.
+- "Tap the TV for sound" (old app hint) was wrong for the Pi 4. The kiosk (`?kiosk`) plays sound
+  without a tap. The hint now says this per device.
+- The TV's old "TV" screen row disappeared 2026-11-04 (cause unknown). JMR's phone paired the
+  Pi 4 again as screen "636" in a new account. 38W was moved to that account, and `API_OWNER`
+  points at it.
 
 ## Unverified, ordered by consequence
 
-1. **`secrets.env.enc` exists only on this Mac** (`~/dev/clackboard`, gitignored because the
-   repo is public). It is not in the master catalog on desk. If this Mac is lost, the secrets
-   must be rebuilt from Vercel/Turso. Add them to `/data/dev/inventory/secrets/master-catalog.enc.yaml`.
-2. The login rate limit (`src/app/api/login/route.ts`, 10 fails per 15 min per IP) is kept in
-   memory on each serverless instance. With the short password, that is weak protection.
-3. **The player can't put the console in graphics mode:** `KDSETMODE` on `/dev/tty1` fails
-   with EACCES (`clackboard_player.py`, `text_mode_off`). It has no visible effect today,
-   because getty is disabled on tty1 and `vt.global_cursor_default=0` is set. Kernel messages
-   could still draw over the board.
-4. The Pi player hasn't been tested with the light theme, with sizes other than 6×22, or with
-   a long offline period. The flap animation is reported fine at 6×22; full-board changes at
-   larger sizes may stutter on the single-core CPU.
-5. Older smart-TV browsers on `/player` are still untested (ResizeObserver and similar features).
+1. **Skip/Pause on the real Pi 4 TV.** They were tested only on a local copy in Chrome, with the
+   playlist text → Vimeo video → text. Skip, Pause, Skip while paused, and Resume all behaved.
+   The Pi 4 kiosk was restarted at 2026-11-05 to load the new code; `systemctl is-active`
+   reported active.
+2. **`secrets.env.enc` exists only on this Mac** (gitignored; the repo is public). It is not in
+   the master catalog. Add it to `/data/dev/inventory/secrets/master-catalog.enc.yaml`.
+3. **The Zero W (38W) runs an older player.** The 2026-11-04 background deploy printed nothing.
+   38W was last seen 2026-11-03. The player now on it may not have the boot-flag change or
+   Skip/Pause.
+4. Whether cage (the kiosk) picks up a TV plugged in after boot is unverified. A power-cycle
+   works.
+5. The rate limit (`src/lib/ratelimit.ts`, 10 fails per 15 min per IP) lives in memory per
+   serverless instance. Sign-in codes are 6 characters and live for 2 min, so the exposure is
+   small, but it is not a global limit.
+6. The Pi Zero player hasn't been tested with the light theme, with non-6×22 sizes, or with a
+   long time offline. `KDSETMODE` on tty1 still fails with EACCES; no visible effect today.
 
 ## Live state
 
-- Web: https://www.clackboard.fyi (apex redirects with a 308); `clackboard.vercel.app` still
-  works. Vercel project `clackboard`, team `huddlehealth`; pushes to `main` deploy automatically.
-- DB: Turso `clackboard` (aws-us-east-1).
-- Pi: Pi Zero W, host `clackboard.local` (192.168.8.192 on Wi-Fi `6DP`), user `jmr`, SSH key
-  login only, passwordless sudo. Raspberry Pi OS 13 Trixie armhf. Paired as screen
-  **"38W"**. Service `clackboard.service` (`/opt/clackboard/clackboard_player.py`), about 6%
-  CPU and 45 MB RSS when idle. Device token in `~/.config/clackboard/device.json` on the Pi.
-- Pi 4 (new, 2026-11-03): Raspberry Pi 4 Model B 4 GB, host `clackboard-tv.local` (172.30.7.x on
-  Wi-Fi `6DP` in Portland), user `jmr`, key login, Raspberry Pi OS Trixie arm64 Lite. Service
-  `clackboard-kiosk.service`. Not paired yet. cloud-init ignored the time zone (came up Europe/London);
-  set to America/Los_Angeles by hand.
-- Portland Wi-Fi is also named `6DP`, so both Pis join it there.
-- Questions doc: https://claude.ai/artifact/4AUW1o4cr1AhM6bzEDtbzt. Q1–Q8 answered; nothing open.
+- Web: https://www.clackboard.fyi (the apex redirects with a 308). Vercel project `clackboard`,
+  team `huddlehealth`. Pushes to `main` deploy in about 45 s.
+- DB: Turso `clackboard` (aws-us-east-1). New columns since 2026-11-03: `login_code`,
+  `login_until`, `skips`, `paused`. They are added by `migrate()` in `src/lib/db.ts`.
+- Pi 4 TV: host `clackboard-tv.local`, user `jmr`, Raspberry Pi OS Trixie arm64, in Portland on
+  Wi-Fi `6DP`. Service `clackboard-kiosk.service`: cage + Chromium on `/player?kiosk`, 1080p,
+  HDMI 0 audio, software video decoding. Paired as screen **"636"**.
+  - Playlist on 2026-11-05: text 20 s, time 20 s, video 60 s (size 50), video 600 s (size 50).
+    Both videos are the Vimeo demo; the second one is a duplicate JMR may want to remove.
+  - The Chromium remote debugging flag is removed.
+- Pi Zero W: host `clackboard.local`, screen **"38W"**, `clackboard.service`. Last seen
+  2026-11-03.
+- Questions doc: https://claude.ai/artifact/4AUW1o4cr1AhM6bzEDtbzt.
 
 ## Standing rules worth not relearning
 
-- Deploy to the Pi: `scp pi/player/*.py pi/player/*.sh jmr@clackboard.local:~/clackboard-player/`
-  then `ssh jmr@clackboard.local 'sudo ~/clackboard-player/install.sh'`. Delete
-  `pi/player/__pycache__` first, or `scp` fails. A restart takes about 15 s.
-- The Zero W is slow: `apt` installs take 5+ min and SSH commands can block for over 2 min.
-  Run long jobs in the background.
-- The Zero W uses 2.4 GHz Wi-Fi only. Power goes in the outer micro-USB port labelled PWR.
-  Shut down with `sudo shutdown -h now` before unplugging.
-- HDMI audio needs the user in the `audio` group and `AUDIODEV=hdmi:CARD=vc4hdmi,DEV=0`.
-- Vercel CLI: `npx -y vercel@50.4.0 … --scope huddlehealth`. Pipe secret values from SOPS
-  into `vercel env add`; never pass them as arguments.
-- Never sign in to production with JMR's password from a tool; he signs in himself.
+- Deploy to the Zero W: delete `pi/player/__pycache__`, then
+  `scp pi/player/*.py pi/player/*.sh jmr@clackboard.local:~/clackboard-player/`, then
+  `ssh jmr@clackboard.local 'sudo ~/clackboard-player/install.sh'`. It is slow; run it in the
+  background.
+- Deploy to the Pi 4: copy `pi/kiosk/install.sh` to the Pi and run it with sudo. After a web
+  deploy, run `sudo systemctl restart clackboard-kiosk`, or the TV keeps the old JS. A restart
+  shows the sign-in screen for 2 min.
+- **Debug the Pi 4's Chromium:**
+  1. Temporarily add `--remote-debugging-port=9222` to the kiosk service.
+  2. Run `ssh -f -N -L 9222:localhost:9222 jmr@clackboard-tv.local`.
+  3. Drive it with Node WebSocket scripts.
+  4. Remove the flag afterward.
+- **Local test with no account:**
+  1. Run `TURSO_DATABASE_URL=file:<tmp>.db API_TOKEN=t SESSION_SECRET=s pnpm next dev -p 3999`.
+  2. Pair with `Authorization: Bearer t`, using the pair code from `sqlite3`.
+  3. See the project skill `clackboard-local-test`.
+- After deleting a route, run `rm -rf .next/types` before `tsc`.
+- In zsh, inline Python containing `$P[...]` breaks. Use heredocs or script files.
+- Vercel CLI: `npx -y vercel@50.4.0 … --scope huddlehealth`. Pipe secret values from SOPS into
+  `vercel env add`; never pass them as arguments.
+- Never sign in to production with JMR's credentials from a tool.
