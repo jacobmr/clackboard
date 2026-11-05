@@ -14,6 +14,7 @@ export function parsePatch(body: Record<string, unknown>, current: { rows: numbe
   if (body.align === "left" || body.align === "center") patch.align = body.align;
   if (body.theme === "dark" || body.theme === "light") patch.theme = body.theme;
   if (typeof body.sound === "boolean") patch.sound = body.sound;
+  if (typeof body.paused === "boolean") patch.paused = body.paused;
   if (Array.isArray(body.playlist)) patch.playlist = body.playlist.flatMap(parseItem).slice(0, 50);
   return patch;
 }

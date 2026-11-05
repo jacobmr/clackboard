@@ -43,6 +43,10 @@ Use a screen id instead of `all` for one screen. `"seconds": 0` keeps the
 message up until `DELETE /api/screens/<id>/send`. Colors: `{red}` `{orange}`
 `{yellow}` `{green}` `{blue}` `{violet}` `{white}`.
 
+`POST /api/screens/<id>/skip` moves the TV to the next playlist item.
+`PATCH /api/screens/<id>` with `{"paused": true}` holds the current message and
+stops any video; `{"paused": false}` resumes. The app has Skip and Pause buttons.
+
 ### From Home Assistant
 
 The Home Assistant playlist item reads states from `HA_URL`, so HA must be

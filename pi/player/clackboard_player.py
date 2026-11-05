@@ -118,6 +118,7 @@ class Rotation:
         self.key = None
         self.index = 0
         self.until = 0
+        self.skips = None
 
     def grid(self, state):
         if not state:
@@ -131,11 +132,17 @@ class Rotation:
             return None
         key = tuple(i["seconds"] for i in items)
         now = time.monotonic()
+        # Skip in the app bumps "skips"; Pause holds the current item.
+        skips = state.get("skips", 0)
+        skipped = self.skips is not None and skips != self.skips
+        self.skips = skips
         if key != self.key:
             self.key, self.index, self.until = key, 0, now + items[0]["seconds"]
-        elif now >= self.until:
+        elif skipped or (now >= self.until and not state.get("paused")):
             self.index = (self.index + 1) % len(items)
             self.until = now + items[self.index]["seconds"]
+        elif state.get("paused"):
+            self.until = now + items[self.index % len(items)]["seconds"]
         return items[self.index % len(items)].get("grid")
 
 

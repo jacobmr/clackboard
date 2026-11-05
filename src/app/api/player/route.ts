@@ -57,5 +57,14 @@ export async function GET(req: Request) {
     }),
   );
 
-  return Response.json({ paired: true, name: screen.name, config, override, items, signinCode: screen.login?.code ?? null });
+  return Response.json({
+    paired: true,
+    name: screen.name,
+    config,
+    override,
+    items,
+    skips: screen.skips,
+    paused: screen.paused,
+    signinCode: screen.login?.code ?? null,
+  });
 }

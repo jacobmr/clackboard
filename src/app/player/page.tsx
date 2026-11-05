@@ -11,6 +11,7 @@ const TOKEN_KEY = "clackboard.device";
 const POLL_MS = 4000;
 
 type Config = { rows: number; cols: number; align: Align; theme: "dark" | "light"; sound: boolean };
+type Item = { seconds: number; text: string; video?: Video; size?: number };
 type State =
   | { paired: false; code: string; config: Config }
   | {
@@ -18,9 +19,20 @@ type State =
       name: string;
       config: Config;
       override: { text: string; until: number } | null;
-      items: { seconds: number; text: string; video?: Video; size?: number }[];
+      items: Item[];
+      skips: number;
+      paused: boolean;
       signinCode: string | null;
     };
+
+// The item after `from`, leaving out videos if asked. `from` if there is none.
+function nextIndex(items: Item[], from: number, noVideo: boolean): number {
+  for (let step = 1; step <= items.length; step++) {
+    const j = (from + step) % items.length;
+    if (!noVideo || !items[j].video) return j;
+  }
+  return from;
+}
 
 function readToken(): string | null {
   try {
@@ -100,12 +112,31 @@ export default function Player() {
   // otherwise each poll would restart the current item's countdown.
   const items = useMemo(() => (state?.paired ? state.items : []), [state]);
   const durations = items.map((i) => i.seconds).join(",");
+  const paused = state?.paired ? state.paused : false;
   useEffect(() => {
     const secs = durations ? durations.split(",").map(Number) : [];
-    if (secs.length === 0) return;
+    if (secs.length === 0 || paused) return;
     const t = setTimeout(() => setIndex((i) => (i + 1) % secs.length), secs[index % secs.length] * 1000);
     return () => clearTimeout(t);
-  }, [index, durations]);
+  }, [index, durations, paused]);
+
+  // Skip in the app bumps a counter; move on when it changes.
+  const skips = state?.paired ? state.skips : undefined;
+  const seenSkips = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (skips === undefined) return;
+    if (seenSkips.current !== undefined && skips !== seenSkips.current && items.length) {
+      setIndex((i) => nextIndex(items, i % items.length, paused));
+    }
+    seenSkips.current = skips;
+  }, [skips, items, paused]);
+
+  // Paused on a video: stop it and hold the next message instead.
+  useEffect(() => {
+    if (paused && items.length && items[index % items.length].video) {
+      setIndex((i) => nextIndex(items, i % items.length, true));
+    }
+  }, [paused, items, index]);
 
   const text = useMemo(() => {
     if (!state) return "";
@@ -114,8 +145,11 @@ export default function Player() {
       return `PAIR THIS SCREEN\n{yellow} ${state.code} {yellow}\n${host}/APP`;
     }
     if (state.override) return state.override.text;
-    return items.length ? items[index % items.length].text : "";
-  }, [state, items, index]);
+    if (!items.length) return "";
+    const item = items[index % items.length];
+    // Paused with only videos in the playlist.
+    return item.video && paused ? "PAUSED" : item.text;
+  }, [state, items, index, paused]);
 
   // Any code on screen also gets a QR code that opens /app with it filled in.
   const code = state ? (state.paired ? state.signinCode : state.code) : null;
@@ -130,7 +164,7 @@ export default function Player() {
 
   // A video item takes the whole screen; an override message still wins.
   const current = state?.paired && !state.override && items.length ? items[index % items.length] : undefined;
-  const video = current?.video;
+  const video = paused ? undefined : current?.video;
   const size = current?.size ?? 100;
 
   if (!state) return <main className={styles.main} />;

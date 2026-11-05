@@ -36,6 +36,10 @@ export type Screen = {
   lastSeen: number | null;
   // A sign-in code the TV shows for a while after it boots.
   login: { code: string; until: number } | null;
+  // Bumped by the app's Skip button; the player moves on when it changes.
+  skips: number;
+  // Hold the current item instead of rotating. Videos stop.
+  paused: boolean;
 };
 
 const SCHEMA = `
@@ -71,7 +75,12 @@ export async function db(): Promise<Client> {
 }
 
 // Columns added after the first release. SQLite has no ADD COLUMN IF NOT EXISTS.
-const COLUMNS = ["login_code TEXT", "login_until INTEGER"];
+const COLUMNS = [
+  "login_code TEXT",
+  "login_until INTEGER",
+  "skips INTEGER NOT NULL DEFAULT 0",
+  "paused INTEGER NOT NULL DEFAULT 0",
+];
 
 async function migrate(c: Client): Promise<void> {
   await c.execute(SCHEMA);
@@ -100,6 +109,8 @@ function toScreen(row: Record<string, unknown>): Screen {
       row.login_code && Number(row.login_until) > Date.now()
         ? { code: String(row.login_code), until: Number(row.login_until) }
         : null,
+    skips: Number(row.skips ?? 0),
+    paused: Number(row.paused) === 1,
   };
 }
 
@@ -200,7 +211,7 @@ export async function claimScreen(owner: string, code: string, name: string): Pr
 }
 
 export type ScreenPatch = Partial<
-  Pick<Screen, "name" | "rows" | "cols" | "align" | "theme" | "sound" | "playlist" | "override">
+  Pick<Screen, "name" | "rows" | "cols" | "align" | "theme" | "sound" | "paused" | "playlist" | "override">
 >;
 
 export async function updateScreen(owner: string, id: string, patch: ScreenPatch): Promise<Screen | null> {
@@ -216,6 +227,7 @@ export async function updateScreen(owner: string, id: string, patch: ScreenPatch
   if (patch.align !== undefined) put("align", patch.align);
   if (patch.theme !== undefined) put("theme", patch.theme);
   if (patch.sound !== undefined) put("sound", patch.sound ? 1 : 0);
+  if (patch.paused !== undefined) put("paused", patch.paused ? 1 : 0);
   if (patch.playlist !== undefined) put("playlist", JSON.stringify(patch.playlist));
   if (patch.override !== undefined) put("override", patch.override ? JSON.stringify(patch.override) : null);
   if (sets.length === 0) return getScreen(owner, id);
@@ -227,6 +239,15 @@ export async function updateScreen(owner: string, id: string, patch: ScreenPatch
     args: [...args, owner, id],
   });
   return res.rows[0] ? toScreen(res.rows[0]) : null;
+}
+
+export async function skipScreen(owner: string, id: string): Promise<boolean> {
+  const c = await db();
+  const res = await c.execute({
+    sql: "UPDATE screens SET skips = skips + 1 WHERE owner_id = ? AND id = ?",
+    args: [owner, id],
+  });
+  return res.rowsAffected > 0;
 }
 
 export async function deleteScreen(owner: string, id: string): Promise<boolean> {

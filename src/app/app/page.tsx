@@ -163,6 +163,16 @@ function ScreenCard({
         <Board grid={preview} theme={screen.theme} fit="container" />
       </div>
 
+      <div className={styles.row}>
+        <button onClick={() => api(`/api/screens/${screen.id}/skip`, { method: "POST" })}>Skip</button>
+        <button className={styles.secondary} onClick={() => patch({ paused: !screen.paused })}>
+          {screen.paused ? "Resume" : "Pause"}
+        </button>
+        <span className={styles.muted}>
+          {screen.paused ? "Paused: the TV holds one message, videos stopped." : "The TV follows within 4 s."}
+        </span>
+      </div>
+
       <h3>Send now</h3>
       <textarea
         rows={3}
