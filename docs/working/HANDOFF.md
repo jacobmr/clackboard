@@ -8,8 +8,7 @@ Last updated 2026-11-05.
   2026-11-05: `POST /api/screens/x/skip` returns 401, so the new route is live).
 - The Pi 4 TV works: board, flap sound, and the Vimeo demo video with sound. JMR confirmed
   "working" on 2026-11-05.
-- **Waiting on JMR:** try the new **Skip** and **Pause** buttons in `/app` on the real TV.
-  They were tested only on a local copy in Chrome (see Unverified 1).
+- Pause works on the real TV (JMR, 2026-11-08). Skip hasn't been confirmed on the TV yet.
 - Questions doc: Q1–Q10 answered (Q10 = (b), passwordless "the TV is the key"). Nothing open.
 
 ## The next work, in order
@@ -56,10 +55,8 @@ Last updated 2026-11-05.
 
 ## Unverified, ordered by consequence
 
-1. **Skip/Pause on the real Pi 4 TV.** They were tested only on a local copy in Chrome, with the
-   playlist text → Vimeo video → text. Skip, Pause, Skip while paused, and Resume all behaved.
-   The Pi 4 kiosk was restarted at 2026-11-05 to load the new code; `systemctl is-active`
-   reported active.
+1. **Skip on the real Pi 4 TV.** Pause works on the TV (JMR confirmed it on 2026-11-08). Skip and
+   Resume were tested only on a local copy in Chrome.
 2. **`secrets.env.enc` exists only on this Mac** (gitignored; the repo is public). It is not in
    the master catalog. Add it to `/data/dev/inventory/secrets/master-catalog.enc.yaml`.
 3. **The Zero W (38W) runs an older player.** The 2026-11-04 background deploy printed nothing.
