@@ -1,10 +1,10 @@
 # Clackboard handoff
 
-Last updated 2026-11-05.
+Last updated 2026-11-08.
 
 ## START HERE
 
-- `main` is pushed and clean at `784f5ca`. No open PRs. Vercel serves `784f5ca` (checked
+- `main` is pushed and clean. Last code commit `784f5ca`; later commits are docs only. No open PRs. Vercel serves `784f5ca` (checked
   2026-11-05: `POST /api/screens/x/skip` returns 401, so the new route is live).
 - The Pi 4 TV works: board, flap sound, and the Vimeo demo video with sound. JMR confirmed
   "working" on 2026-11-05.
