@@ -58,6 +58,7 @@ state = {
     "saved": [],  # saved Wi-Fi connection names
     "ap_pass": f"{secrets.randbelow(10**8):08d}",
     "signin_since": 0.0,
+    "ap_since": 0.0,  # when the setup network last came up
 }
 last_portal_hit = 0.0
 ap_server = None
@@ -183,6 +184,8 @@ def ap_up():
     )
     ok = ok and nm("connection", "up", "id", AP_CON, timeout=45)[0]
     log("setup network up:", ok)
+    if ok:
+        set_state(ap_since=time.time())
     if ok:
         for _ in range(10):  # the address appears a moment after "up"
             with lock:
@@ -339,7 +342,6 @@ def retry_saved():
 
 def watch():
     last_ok = time.time()
-    ap_since = 0.0
     while True:
         mode = state["mode"]
         if mode in ("joining", "retrying"):
@@ -360,16 +362,12 @@ def watch():
                 ap_down()
                 set_state(mode="online", ssid=current_ssid(), message="")
                 last_ok = time.time()
-            elif not ap_since:
-                ap_since = time.time()
-            elif (time.time() - ap_since > AP_WINDOW
+            elif (time.time() - state["ap_since"] > AP_WINDOW
                   and time.time() - last_portal_hit > PORTAL_BUSY and claim("retrying")):
                 retry_saved()
-                ap_since = 0.0
                 last_ok = time.time()
             time.sleep(5)
             continue
-        ap_since = 0.0
         if online():
             last_ok = time.time()
             if mode != "online" or not state["ssid"]:
