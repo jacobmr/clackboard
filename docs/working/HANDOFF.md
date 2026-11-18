@@ -5,9 +5,11 @@ Last updated 2026-11-15.
 ## START HERE
 
 - **2026-11-15: Pi TV Wi-Fi setup for JMR's conference trip.** PR from branch
-  `session/reckless-shrike-a0hx` (commits `43fb37a`, `c75e395`), not merged. The code is
-  already installed and running on the Pi 4. Merging to `main` redeploys the web app on Vercel,
-  but the web app doesn't use `pi/`, so nothing live changes.
+  `session/reckless-shrike-a0hx` (commits `43fb37a`, `c75e395`), merged as PR #2 (`8ccf6fa`)
+  on 2026-11-15. The code is installed and running on the Pi 4.
+  **Result at the conference (ISTE, JMR on 2026-11-16 and 2026-11-17): "working very well",
+  "venue wifi was great".** How it joined (setup page or otherwise) and whether an
+  accept-terms page came up are not known yet.
   How it works: with no internet for 90 s, the Pi starts its own Wi-Fi network
   `Clackboard-Setup` (an 8-digit password, new on each service start, shown on the TV). A phone joins,
   a setup page opens (captive portal at `10.42.0.1`), and you pick the venue Wi-Fi. Every
@@ -27,9 +29,9 @@ Last updated 2026-11-15.
 
 ## The next work, in order
 
-0. After the conference: ask JMR whether the venue Wi-Fi worked, and whether an accept-terms
-   page came up. The `signin` path has never met a real one. Read
-   `journalctl -u clackboard-wifi` on the Pi.
+0. When the Pi is back on home Wi-Fi: read `journalctl -u clackboard-wifi` on the Pi for the
+   ISTE days to learn how it joined the venue network and whether mode `signin` ever ran.
+   JMR already reported the venue Wi-Fi worked; the log only fills in which path did it.
 1. If JMR reports Skip/Pause problems on the TV: the browser logic is in
    `src/app/player/page.tsx` (`nextIndex`, and the three effects after "Rotate through the
    playlist"). The server side is `skipScreen` in `src/lib/db.ts` and
@@ -47,7 +49,7 @@ Last updated 2026-11-15.
 6. *(Optional, 1–2 days.)* ESP32 client polling `GET /api/player?token=…&format=grid`.
 7. Dropped by JMR on 2026-10-26: the Home Assistant pull feed. Do not resume unless he asks.
 
-## What shipped 2026-11-15 (branch `session/reckless-shrike-a0hx`, PR open)
+## What shipped 2026-11-15 (PR #2, squash-merged as `8ccf6fa`)
 
 | Commit | What it did |
 |---|---|
@@ -83,9 +85,10 @@ Also on the Pi only (not in the repo): saved Wi-Fi connection `JacobPhone`, prio
 
 ## Unverified, ordered by consequence
 
-0. **Wi-Fi setup, on the real Pi 2026-11-15.** Proven: the setup network comes up, JMR's Pixel
+0. **Wi-Fi setup.** At ISTE the Pi got onto the venue Wi-Fi and showed the board (JMR's
+   report, not yet checked in the log). On the real Pi 2026-11-15, proven: the setup network comes up, JMR's Pixel
    joined it, the page submitted a join, "no internet" was handled, and the Pi went back to home
-   Wi-Fi. Not proven: (a) the first of 3 runs, the phone never listed `Clackboard-Setup`
+   Wi-Fi. Still not proven (the ISTE log may settle (b) and (c)): (a) the first of 3 runs, the phone never listed `Clackboard-Setup`
    although the Pi logged `AP-ENABLED`; no cause was found. (b) A real accept-terms page.
    (c) A successful join to a new network through the page (the test join correctly failed
    because the internet was blocked). (d) Behaviour while the TV page shows the venue page and
